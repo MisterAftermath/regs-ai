@@ -5,20 +5,20 @@ import {
   type MarkSpec,
   DOMParser,
 } from 'prosemirror-model';
-import { schema } from 'prosemirror-schema-basic';
-import { addListNodes } from 'prosemirror-schema-list';
 import { EditorState } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import React, { useEffect, useRef } from 'react';
 import { renderToString } from 'react-dom/server';
-import ReactMarkdown from 'react-markdown';
 
+import { Markdown } from '@/components/markdown';
 import { diffEditor, DiffType } from '@/lib/editor/diff';
+import { documentSchema } from '@/lib/editor/config';
 
+// Create diff schema based on the same documentSchema used in the main editor
 const diffSchema = new Schema({
-  nodes: addListNodes(schema.spec.nodes, 'paragraph block*', 'block'),
+  nodes: documentSchema.spec.nodes,
   marks: OrderedMap.from({
-    ...schema.spec.marks.toObject(),
+    ...documentSchema.spec.marks.toObject(),
     diffMark: {
       attrs: { type: { default: '' } },
       toDOM(mark) {
@@ -59,12 +59,9 @@ export const DiffView = ({ oldContent, newContent }: DiffEditorProps) => {
     if (editorRef.current && !viewRef.current) {
       const parser = DOMParser.fromSchema(diffSchema);
 
-      const oldHtmlContent = renderToString(
-        <ReactMarkdown>{oldContent}</ReactMarkdown>,
-      );
-      const newHtmlContent = renderToString(
-        <ReactMarkdown>{newContent}</ReactMarkdown>,
-      );
+      // Use the same Markdown component as the main editor
+      const oldHtmlContent = renderToString(<Markdown>{oldContent}</Markdown>);
+      const newHtmlContent = renderToString(<Markdown>{newContent}</Markdown>);
 
       const oldContainer = document.createElement('div');
       oldContainer.innerHTML = oldHtmlContent;
@@ -96,5 +93,10 @@ export const DiffView = ({ oldContent, newContent }: DiffEditorProps) => {
     };
   }, [oldContent, newContent]);
 
-  return <div className="diff-editor" ref={editorRef} />;
+  return (
+    <div
+      className="diff-editor relative prose dark:prose-invert"
+      ref={editorRef}
+    />
+  );
 };
