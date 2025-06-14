@@ -34,8 +34,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
               }}
               className="flex flex-row gap-3 items-center"
             >
-              <span className="text-lg font-semibold px-2 hover:bg-muted rounded-md cursor-pointer">
-                Chatbot
+              <span className="text-lg font-semibold px-2 bg-primary dark:bg-inherit text-primary-foreground dark:text-primary-foreground hover:bg-primary/90 dark:hover:bg-primary/90 rounded-md cursor-pointer">
+                Regs AI
               </span>
             </Link>
             <Tooltip>
