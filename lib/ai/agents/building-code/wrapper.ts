@@ -10,6 +10,8 @@ import type {
   LanguageModelV1CallWarning,
   LanguageModelV1FinishReason,
   LanguageModelV1StreamPart,
+  LanguageModelV1CallOptions,
+  LanguageModelV1Message,
 } from '@ai-sdk/provider';
 import type { BuildingCodeAgent } from './types';
 
@@ -31,14 +33,32 @@ export function createBuildingCodeLanguageModel(
     /**
      * Generate a response using the pipeline
      */
-    async doGenerate(options) {
+    async doGenerate(options: LanguageModelV1CallOptions) {
       console.log('🔧 AI SDK Wrapper: doGenerate called');
 
       // Convert messages to our format
-      const messages = options.messages.map((msg) => ({
-        role: msg.role,
-        content: msg.content[0]?.type === 'text' ? msg.content[0].text : '',
-      }));
+      const messages = options.prompt
+        .filter(
+          (
+            msg,
+          ): msg is LanguageModelV1Message & { role: 'user' | 'assistant' } =>
+            msg.role === 'user' || msg.role === 'assistant',
+        )
+        .map((msg) => {
+          let content = '';
+          if (typeof msg.content === 'string') {
+            content = msg.content;
+          } else {
+            const textPart = msg.content.find((part) => part.type === 'text');
+            if (textPart && 'text' in textPart) {
+              content = textPart.text;
+            }
+          }
+          return {
+            role: msg.role,
+            content,
+          };
+        });
 
       // Extract options
       const agentOptions = {
@@ -69,14 +89,32 @@ export function createBuildingCodeLanguageModel(
     /**
      * Stream a response using the pipeline
      */
-    async doStream(options) {
+    async doStream(options: LanguageModelV1CallOptions) {
       console.log('🔧 AI SDK Wrapper: doStream called');
 
       // Convert messages
-      const messages = options.messages.map((msg) => ({
-        role: msg.role,
-        content: msg.content[0]?.type === 'text' ? msg.content[0].text : '',
-      }));
+      const messages = options.prompt
+        .filter(
+          (
+            msg,
+          ): msg is LanguageModelV1Message & { role: 'user' | 'assistant' } =>
+            msg.role === 'user' || msg.role === 'assistant',
+        )
+        .map((msg) => {
+          let content = '';
+          if (typeof msg.content === 'string') {
+            content = msg.content;
+          } else {
+            const textPart = msg.content.find((part) => part.type === 'text');
+            if (textPart && 'text' in textPart) {
+              content = textPart.text;
+            }
+          }
+          return {
+            role: msg.role,
+            content,
+          };
+        });
 
       // Extract options
       const agentOptions = {
@@ -85,10 +123,14 @@ export function createBuildingCodeLanguageModel(
         maxSources: 5,
       };
 
+      if (!agent.stream) {
+        throw new Error('This agent does not support streaming.');
+      }
+
       // Create stream
       return {
-        stream: createAsyncIterableStream(
-          agent.stream!({ messages, options: agentOptions }),
+        stream: createSdkStream(
+          agent.stream({ messages, options: agentOptions }),
         ),
         rawCall: {
           rawPrompt: null,
@@ -101,38 +143,38 @@ export function createBuildingCodeLanguageModel(
 }
 
 /**
- * Helper to create an async iterable stream compatible with AI SDK
+ * Helper to create a ReadableStream compatible with AI SDK from an AsyncGenerator
  */
-async function* createAsyncIterableStream(
+function createSdkStream(
   agentStream: AsyncGenerator<string, void, unknown>,
-): AsyncGenerator<LanguageModelV1StreamPart, void, unknown> {
-  let buffer = '';
-
-  try {
-    for await (const chunk of agentStream) {
-      buffer += chunk;
-
-      // Emit text delta
-      yield {
-        type: 'text-delta',
-        textDelta: chunk,
-      };
-    }
-
-    // Emit finish
-    yield {
-      type: 'finish',
-      finishReason: 'stop',
-      usage: {
-        promptTokens: 0,
-        completionTokens: buffer.length,
-      },
-    };
-  } catch (error) {
-    // Emit error
-    yield {
-      type: 'error',
-      error: error instanceof Error ? error : new Error(String(error)),
-    };
-  }
+): ReadableStream<LanguageModelV1StreamPart> {
+  return new ReadableStream<LanguageModelV1StreamPart>({
+    async start(controller) {
+      let buffer = '';
+      try {
+        for await (const chunk of agentStream) {
+          buffer += chunk;
+          controller.enqueue({
+            type: 'text-delta',
+            textDelta: chunk,
+          });
+        }
+        controller.enqueue({
+          type: 'finish',
+          finishReason: 'stop',
+          usage: {
+            promptTokens: 0,
+            completionTokens: buffer.length,
+          },
+        });
+      } catch (error) {
+        controller.enqueue({
+          type: 'error',
+          error: error instanceof Error ? error : new Error(String(error)),
+        });
+      } finally {
+        controller.close();
+      }
+    },
+  });
 }

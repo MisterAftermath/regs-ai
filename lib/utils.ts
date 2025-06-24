@@ -3,6 +3,7 @@ import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import type { Document } from '@/lib/db/schema';
 import { ChatSDKError, type ErrorCode } from './errors';
+import type { CoreMessage } from 'ai';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -88,4 +89,31 @@ export function getTrailingMessageId({
 
 export function sanitizeText(text: string) {
   return text.replace('<has_function_call>', '');
+}
+
+/**
+ * Extracts the text content from a CoreMessage's content field.
+ * Handles both string and array (multi-modal) content.
+ * @param content - The content from a CoreMessage.
+ * @returns The extracted text as a string.
+ */
+export function extractTextFromContent(
+  content: CoreMessage['content'] | undefined,
+): string {
+  if (!content) {
+    return '';
+  }
+
+  if (typeof content === 'string') {
+    return content;
+  }
+
+  // Find the first text part in the array of content parts.
+  const textPart = content.find((part) => part.type === 'text');
+
+  if (textPart && 'text' in textPart) {
+    return textPart.text;
+  }
+
+  return '';
 }

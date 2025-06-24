@@ -9,7 +9,6 @@
 import type { BuildingCodeAgent, BuildingCodeConfig } from './types';
 import { executePipeline, streamPipeline } from './pipeline';
 import { config } from './config';
-import type { CoreMessage } from 'ai';
 
 /**
  * Creates a pipeline-based Building Code Agent

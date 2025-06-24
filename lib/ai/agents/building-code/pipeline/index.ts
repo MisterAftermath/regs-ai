@@ -15,6 +15,15 @@ import { createClarificationAgent } from './clarify';
 import { createRetrievalAgent } from './retrieve';
 import { createVerificationAgent } from './verify';
 import { createSynthesisAgent } from './synthesize';
+import { extractTextFromContent } from '@/lib/utils';
+
+type PhaseTimings = {
+  clarify: number;
+  retrieve: number;
+  verify: number;
+  synthesize: number;
+  review: number;
+};
 
 /**
  * Execute the complete building code pipeline
@@ -42,7 +51,9 @@ export async function executePipeline(
 
   // Initialize pipeline state
   const state: PipelineState = {
-    originalQuery: messages[messages.length - 1]?.content || '',
+    originalQuery: extractTextFromContent(
+      messages[messages.length - 1]?.content,
+    ),
     clarifiedQuery: {
       question: '',
     },
@@ -50,10 +61,18 @@ export async function executePipeline(
     verifiedCitations: [],
     metadata: {
       startTime: Date.now(),
-      phaseTimings: {} as any,
+      phaseTimings: {
+        clarify: 0,
+        retrieve: 0,
+        verify: 0,
+        synthesize: 0,
+        review: 0,
+      },
       errors: [],
     },
   };
+
+  let currentPhase: keyof PhaseTimings = 'clarify';
 
   try {
     // Phase 1: Clarification
@@ -82,6 +101,7 @@ export async function executePipeline(
     }
 
     // Phase 2: Retrieval
+    currentPhase = 'retrieve';
     const retrieveStart = Date.now();
     console.log('\n📚 Phase 2: Retrieval');
 
@@ -96,6 +116,7 @@ export async function executePipeline(
     );
 
     // Phase 3: Verification
+    currentPhase = 'verify';
     const verifyStart = Date.now();
     console.log('\n✅ Phase 3: Verification');
 
@@ -114,6 +135,7 @@ export async function executePipeline(
     );
 
     // Phase 4: Synthesis
+    currentPhase = 'synthesize';
     const synthesizeStart = Date.now();
     console.log('\n🔨 Phase 4: Synthesis');
 
@@ -128,19 +150,35 @@ export async function executePipeline(
     console.log(
       `   ✅ Synthesized response in ${state.metadata.phaseTimings.synthesize}ms`,
     );
-    console.log(
-      `   Confidence: ${(state.synthesizedResponse.confidence * 100).toFixed(0)}%`,
-    );
 
     // Phase 5: Review (placeholder for future implementation)
+    currentPhase = 'review';
     state.metadata.phaseTimings.review = 0;
 
     // Calculate total time
     const totalTime = Date.now() - state.metadata.startTime;
     console.log(`\n✅ Pipeline completed in ${totalTime}ms`);
 
+    if (!state.synthesizedResponse) {
+      throw new BuildingCodeError(
+        'Pipeline completed without a response.',
+        currentPhase,
+        'INTERNAL_ERROR',
+        { state },
+      );
+    }
+
+    console.log(
+      `   Confidence: ${(state.synthesizedResponse.confidence * 100).toFixed(0)}%`,
+    );
+
     // Return results
-    const result: any = {
+    const result: {
+      content: string;
+      sources?: Source[];
+      confidence?: number;
+      state?: PipelineState;
+    } = {
       content: state.synthesizedResponse.content,
       sources: options?.maxSources
         ? state.synthesizedResponse.sources.slice(0, options.maxSources)
@@ -158,11 +196,11 @@ export async function executePipeline(
 
     return result;
   } catch (error) {
-    console.error('\n❌ Pipeline error:', error);
+    console.error(`\n❌ Pipeline error during '${currentPhase}' phase:`, error);
 
     // Log error to state
     state.metadata.errors.push({
-      phase: 'synthesize', // Default to last phase
+      phase: currentPhase,
       error: error instanceof Error ? error.message : String(error),
     });
 
@@ -170,7 +208,7 @@ export async function executePipeline(
     if (error instanceof Error) {
       throw new BuildingCodeError(
         error.message,
-        'synthesize',
+        currentPhase,
         'PIPELINE_ERROR',
         { state },
       );

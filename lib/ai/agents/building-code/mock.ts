@@ -21,7 +21,10 @@ export function createMockBuildingCodeAgent(): BuildingCodeAgent {
       // Get the last user message
       const userMessages = messages.filter((m) => m.role === 'user');
       const lastUserMessage = userMessages[userMessages.length - 1];
-      const question = lastUserMessage?.content?.trim() || '';
+      const question =
+        typeof lastUserMessage?.content === 'string'
+          ? lastUserMessage.content.trim()
+          : (lastUserMessage?.content[0] as any)?.text.trim() || '';
 
       if (!question) {
         return {
@@ -75,7 +78,10 @@ In production, I would:
 
       const userMessages = messages.filter((m) => m.role === 'user');
       const lastUserMessage = userMessages[userMessages.length - 1];
-      const question = lastUserMessage?.content?.trim() || '';
+      const question =
+        typeof lastUserMessage?.content === 'string'
+          ? lastUserMessage.content.trim()
+          : (lastUserMessage?.content[0] as any)?.text.trim() || '';
 
       if (!question) {
         yield ERROR_MESSAGES.NO_QUESTION;
