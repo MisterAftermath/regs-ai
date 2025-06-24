@@ -41,3 +41,7 @@ yarn-error.log*
 /playwright-report/
 /blob-report/
 /playwright/*
+
+#Big unnecessary folders
+IngestionWorkspace
+chroma

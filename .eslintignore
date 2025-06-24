@@ -1,0 +1,5 @@
+# Ignore admin directory and all subdirectories
+app/(admin)/**/*
+
+# Ignore agents directory and all subdirectories
+lib/ai/agents/**/* 
