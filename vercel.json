@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "app/(chat)/api/chat/route.ts": {
+      "maxDuration": 60
+    }
+  },
+  "env": {
+    "NODE_ENV": "production"
+  }
+} 

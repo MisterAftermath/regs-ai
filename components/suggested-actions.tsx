@@ -19,24 +19,25 @@ function PureSuggestedActions({
 }: SuggestedActionsProps) {
   const suggestedActions = [
     {
-      title: 'What are the advantages',
-      label: 'of using Next.js?',
-      action: 'What are the advantages of using Next.js?',
+      title: 'Right-of-Way Survey Requirements',
+      label: 'for projects in Houston',
+      action: 'What are the Right-of-Way survey requirements in Houston?',
     },
     {
-      title: 'Write code to',
-      label: `demonstrate djikstra's algorithm`,
-      action: `Write code to demonstrate djikstra's algorithm`,
+      title: 'Minimum Lot Dimensions',
+      label: 'for residential zoning',
+      action:
+        'What are the minimum lot dimensions for residential zoning in Houston?',
     },
     {
-      title: 'Help me write an essay',
-      label: `about silicon valley`,
-      action: `Help me write an essay about silicon valley`,
+      title: 'Traffic Signal Installation Standards',
+      label: 'in Houston',
+      action: 'What are the traffic signal installation standards in Houston?',
     },
     {
-      title: 'What is the weather',
-      label: 'in San Francisco?',
-      action: 'What is the weather in San Francisco?',
+      title: 'General Plan Submittal Process',
+      label: 'for developments in Houston',
+      action: 'What is the general plan submittal process in Houston?',
     },
   ];
 
@@ -57,7 +58,7 @@ function PureSuggestedActions({
           <Button
             variant="ghost"
             onClick={async () => {
-              window.history.replaceState({}, '', `/chat/${chatId}`);
+              window.history.replaceState({}, '', `/${chatId}`);
 
               append({
                 role: 'user',

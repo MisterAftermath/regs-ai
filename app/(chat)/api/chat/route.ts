@@ -18,11 +18,12 @@ import {
   saveMessages,
 } from '@/lib/db/queries';
 import { generateUUID, getTrailingMessageId } from '@/lib/utils';
-import { generateTitleFromUserMessage } from '../../chat/actions';
+import { generateTitleFromUserMessage } from '../../actions';
 import { createDocument } from '@/lib/ai/tools/create-document';
 import { updateDocument } from '@/lib/ai/tools/update-document';
 import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
+import { searchChromaDb } from '@/lib/ai/tools/search-chroma-db';
 import { isProductionEnvironment } from '@/lib/constants';
 import { myProvider } from '@/lib/ai/providers';
 import { entitlementsByUserType } from '@/lib/ai/entitlements';
@@ -154,15 +155,27 @@ export async function POST(request: Request) {
           experimental_activeTools:
             selectedChatModel === 'chat-model-reasoning'
               ? []
-              : [
-                  'getWeather',
-                  'createDocument',
-                  'updateDocument',
-                  'requestSuggestions',
-                ],
+              : selectedChatModel === 'chat-model-chroma'
+                ? [] // Chroma agent handles its own tools internally
+                : selectedChatModel === 'chat-model-building-code'
+                  ? [] // Building Code agent handles its own tools internally
+                  : selectedChatModel === 'chat-model-building-code-chroma'
+                    ? [
+                        'searchChromaDb',
+                        'createDocument',
+                        'updateDocument',
+                        'requestSuggestions',
+                      ]
+                    : [
+                        'getWeather',
+                        'createDocument',
+                        'updateDocument',
+                        'requestSuggestions',
+                      ],
           experimental_transform: smoothStream({ chunking: 'word' }),
           experimental_generateMessageId: generateUUID,
           tools: {
+            searchChromaDb,
             getWeather,
             createDocument: createDocument({ session, dataStream }),
             updateDocument: updateDocument({ session, dataStream }),
