@@ -70,23 +70,36 @@ export function Chat({
     sendExtraMessageFields: true,
     generateId: generateUUID,
     fetch: fetchWithErrorHandlers,
-    experimental_prepareRequestBody: (body) => ({
-      id,
-      message: body.messages.at(-1),
-      selectedChatModel: initialChatModel,
-      selectedVisibilityType: visibilityType,
-      jurisdictionId, // Add jurisdiction to request
-    }),
+    experimental_prepareRequestBody: (body) => {
+      const requestBody = {
+        id,
+        message: body.messages.at(-1),
+        selectedChatModel: initialChatModel,
+        selectedVisibilityType: visibilityType,
+        jurisdictionId, // Add jurisdiction to request
+      };
+      console.log('[Chat Client] Preparing request body:', requestBody);
+      return requestBody;
+    },
     onFinish: () => {
+      console.log('[Chat Client] Chat finished successfully');
       mutate(unstable_serialize(getChatHistoryPaginationKey));
     },
     onError: (error) => {
+      console.error('[Chat Client] Chat error:', error);
       if (error instanceof ChatSDKError) {
         toast({
           type: 'error',
           description: error.message,
         });
       }
+    },
+    onResponse: (response) => {
+      console.log('[Chat Client] Response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+      });
     },
   });
 

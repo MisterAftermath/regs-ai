@@ -15,13 +15,21 @@ export interface Jurisdiction {
 }
 
 export const jurisdictions: Jurisdiction[] = [
+  // Testing jursidiction
+  {
+    id: 'test',
+    name: 'Test',
+    collection: 'regsai',
+    isDefault: true,
+  },
+
   // Texas jurisdictions
   {
     id: 'houston',
     name: 'Houston, TX',
     collection: 'regsai-houston',
     state: 'TX',
-    isDefault: true, // Set one as default
+    //isDefault: true, // Set one as default
   },
   {
     id: 'austin',

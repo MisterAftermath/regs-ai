@@ -110,6 +110,12 @@ function PureMultimodalInput({
   const [uploadQueue, setUploadQueue] = useState<Array<string>>([]);
 
   const submitForm = useCallback(() => {
+    console.log('[MultimodalInput] Submitting form', {
+      chatId,
+      hasAttachments: attachments.length > 0,
+      inputLength: input.length,
+    });
+
     window.history.replaceState({}, '', `/chat/${chatId}`);
 
     handleSubmit(undefined, {
@@ -130,6 +136,7 @@ function PureMultimodalInput({
     setLocalStorageInput,
     width,
     chatId,
+    input,
   ]);
 
   const uploadFile = async (file: File) => {

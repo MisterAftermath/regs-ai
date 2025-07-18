@@ -47,17 +47,38 @@ let globalStreamContext: ResumableStreamContext | null = null;
 function getStreamContext() {
   if (!globalStreamContext) {
     try {
+      // Check if REDIS_URL is set and valid
+      const redisUrl = process.env.REDIS_URL;
+      if (!redisUrl) {
+        console.log('[Chat API] REDIS_URL not set, resumable streams disabled');
+        return null;
+      }
+
+      // Try to parse the URL to validate it
+      try {
+        new URL(redisUrl);
+      } catch (urlError) {
+        console.error('[Chat API] Invalid REDIS_URL format:', urlError);
+        return null;
+      }
+
       globalStreamContext = createResumableStreamContext({
         waitUntil: after,
       });
+      console.log('[Chat API] Resumable stream context created successfully');
     } catch (error: any) {
       if (error.message.includes('REDIS_URL')) {
         console.log(
-          ' > Resumable streams are disabled due to missing REDIS_URL',
+          '[Chat API] Resumable streams are disabled due to missing REDIS_URL',
         );
       } else {
-        console.error(error);
+        console.error(
+          '[Chat API] Failed to create resumable stream context:',
+          error,
+        );
       }
+      // Return null to disable resumable streams on any error
+      return null;
     }
   }
 
@@ -65,12 +86,15 @@ function getStreamContext() {
 }
 
 export async function POST(request: Request) {
+  console.log('[Chat API] POST request received');
   let requestBody: PostRequestBody;
 
   try {
     const json = await request.json();
+    console.log('[Chat API] Request body:', JSON.stringify(json, null, 2));
     requestBody = postRequestBodySchema.parse(json);
-  } catch (_) {
+  } catch (error) {
+    console.error('[Chat API] Failed to parse request body:', error);
     return new ChatSDKError('bad_request:api').toResponse();
   }
 
@@ -83,11 +107,22 @@ export async function POST(request: Request) {
       jurisdictionId,
     } = requestBody;
 
+    console.log('[Chat API] Processing chat request:', {
+      chatId: id,
+      model: selectedChatModel,
+      visibility: selectedVisibilityType,
+      jurisdictionId,
+      messageId: message.id,
+    });
+
     const session = await auth();
 
     if (!session?.user) {
+      console.log('[Chat API] No authenticated user');
       return new ChatSDKError('unauthorized:chat').toResponse();
     }
+
+    console.log('[Chat API] Authenticated user:', session.user.id);
 
     const userType: UserType = session.user.type;
 
@@ -96,13 +131,17 @@ export async function POST(request: Request) {
       differenceInHours: 24,
     });
 
+    console.log('[Chat API] User message count (24h):', messageCount);
+
     if (messageCount > entitlementsByUserType[userType].maxMessagesPerDay) {
+      console.log('[Chat API] Rate limit exceeded');
       return new ChatSDKError('rate_limit:chat').toResponse();
     }
 
     const chat = await getChatById({ id });
 
     if (!chat) {
+      console.log('[Chat API] Creating new chat');
       const title = await generateTitleFromUserMessage({
         message,
       });
@@ -114,12 +153,15 @@ export async function POST(request: Request) {
         visibility: selectedVisibilityType,
       });
     } else {
+      console.log('[Chat API] Using existing chat');
       if (chat.userId !== session.user.id) {
+        console.log('[Chat API] User does not own chat');
         return new ChatSDKError('forbidden:chat').toResponse();
       }
     }
 
     const previousMessages = await getMessagesByChatId({ id });
+    console.log('[Chat API] Previous messages count:', previousMessages.length);
 
     const messages = appendClientMessage({
       // @ts-expect-error: todo add type conversion from DBMessage[] to UIMessage[]
@@ -136,8 +178,11 @@ export async function POST(request: Request) {
       country,
     };
 
+    console.log('[Chat API] Request hints:', requestHints);
+
     // Fetch user annotations
     const userAnnotations = await getActiveAnnotationsByUserId(session.user.id);
+    console.log('[Chat API] User annotations count:', userAnnotations.length);
 
     await saveMessages({
       messages: [
@@ -154,9 +199,12 @@ export async function POST(request: Request) {
 
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
+    console.log('[Chat API] Created stream ID:', streamId);
 
     const stream = createDataStream({
       execute: (dataStream) => {
+        console.log('[Chat API] Creating data stream');
+
         // Create a custom searchChromaDb tool with jurisdiction context
         const searchChromaDbWithJurisdiction = tool({
           description: searchChromaDb.description,
@@ -165,10 +213,32 @@ export async function POST(request: Request) {
             query,
             limit,
           }: { query: string; limit?: number }) => {
+            console.log('[Chat API] Executing searchChromaDb tool:', {
+              query,
+              limit,
+              jurisdictionId,
+            });
             // @ts-ignore - jurisdiction is not in the original parameters but we're adding it
             return searchChromaDb.execute({ query, jurisdictionId, limit });
           },
         });
+
+        console.log(
+          '[Chat API] Configuring streamText with model:',
+          selectedChatModel,
+        );
+
+        try {
+          const model = myProvider.languageModel(selectedChatModel);
+          console.log('[Chat API] Model retrieved successfully:', {
+            modelId: selectedChatModel,
+            modelType: typeof model,
+            hasModel: !!model,
+          });
+        } catch (error) {
+          console.error('[Chat API] Failed to retrieve model:', error);
+          throw error;
+        }
 
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
@@ -215,6 +285,10 @@ export async function POST(request: Request) {
             }),
           },
           onFinish: async ({ response }) => {
+            console.log(
+              '[Chat API] Stream finished, response messages:',
+              response.messages.length,
+            );
             if (session.user?.id) {
               try {
                 const assistantId = getTrailingMessageId({
@@ -245,8 +319,9 @@ export async function POST(request: Request) {
                     },
                   ],
                 });
-              } catch (_) {
-                console.error('Failed to save chat');
+                console.log('[Chat API] Assistant message saved');
+              } catch (error) {
+                console.error('[Chat API] Failed to save chat:', error);
               }
             }
           },
@@ -256,30 +331,62 @@ export async function POST(request: Request) {
           },
         });
 
+        console.log('[Chat API] Consuming stream');
         result.consumeStream();
 
+        console.log('[Chat API] Merging into data stream');
         result.mergeIntoDataStream(dataStream, {
           sendReasoning: true,
         });
       },
-      onError: () => {
+      onError: (error) => {
+        console.error('[Chat API] Stream error:', error);
         return 'Oops, an error occurred!';
       },
     });
 
     const streamContext = getStreamContext();
+    console.log('[Chat API] Stream context available:', !!streamContext);
 
-    if (streamContext) {
-      return new Response(
-        await streamContext.resumableStream(streamId, () => stream),
+    try {
+      if (streamContext) {
+        console.log(
+          '[Chat API] Attempting to create resumable stream response',
+        );
+        const resumableStream = await streamContext.resumableStream(
+          streamId,
+          () => stream,
+        );
+        console.log('[Chat API] Resumable stream created successfully');
+        return new Response(resumableStream);
+      } else {
+        console.log('[Chat API] Returning direct stream response (no Redis)');
+        return new Response(stream);
+      }
+    } catch (resumableError) {
+      console.error(
+        '[Chat API] Failed to create resumable stream, falling back to regular stream:',
+        resumableError,
       );
-    } else {
+      // Fall back to regular streaming if resumable stream fails
       return new Response(stream);
     }
   } catch (error) {
+    console.error('[Chat API] Unexpected error:', error);
     if (error instanceof ChatSDKError) {
       return error.toResponse();
     }
+    // Return a generic error response for unexpected errors
+    return new Response(
+      JSON.stringify({
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      },
+    );
   }
 }
 

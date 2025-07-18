@@ -41,12 +41,26 @@ export class ChatSDKError extends Error {
   constructor(errorCode: ErrorCode, cause?: string) {
     super();
 
-    const [type, surface] = errorCode.split(':');
+    // Validate errorCode
+    if (
+      !errorCode ||
+      typeof errorCode !== 'string' ||
+      !errorCode.includes(':')
+    ) {
+      console.error('[ChatSDKError] Invalid error code:', errorCode);
+      // Default to a generic error
+      this.type = 'bad_request';
+      this.surface = 'api';
+    } else {
+      const [type, surface] = errorCode.split(':');
+      this.type = type as ErrorType;
+      this.surface = surface as Surface;
+    }
 
-    this.type = type as ErrorType;
     this.cause = cause;
-    this.surface = surface as Surface;
-    this.message = getMessageByErrorCode(errorCode);
+    this.message = getMessageByErrorCode(
+      `${this.type}:${this.surface}` as ErrorCode,
+    );
     this.statusCode = getStatusCodeByType(this.type);
   }
 

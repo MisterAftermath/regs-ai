@@ -28,12 +28,52 @@ export async function fetchWithErrorHandlers(
     const response = await fetch(input, init);
 
     if (!response.ok) {
-      const { code, cause } = await response.json();
-      throw new ChatSDKError(code as ErrorCode, cause);
+      try {
+        const errorData = await response.json();
+        const { code, cause } = errorData;
+
+        // If code is missing or invalid, throw a generic error based on status
+        if (!code || typeof code !== 'string' || !code.includes(':')) {
+          console.error(
+            '[fetchWithErrorHandlers] Invalid error response:',
+            errorData,
+          );
+
+          // Map status codes to appropriate error codes
+          let errorCode: ErrorCode = 'bad_request:api';
+          if (response.status === 401) errorCode = 'unauthorized:api';
+          else if (response.status === 403) errorCode = 'forbidden:api';
+          else if (response.status === 404) errorCode = 'not_found:api';
+          else if (response.status === 429) errorCode = 'rate_limit:api';
+          else if (response.status >= 500) errorCode = 'bad_request:api'; // Server errors
+
+          throw new ChatSDKError(
+            errorCode,
+            errorData.error || errorData.message || 'Server error',
+          );
+        }
+
+        throw new ChatSDKError(code as ErrorCode, cause);
+      } catch (parseError) {
+        // If we can't parse the JSON, throw a generic error
+        console.error(
+          '[fetchWithErrorHandlers] Failed to parse error response:',
+          parseError,
+        );
+        throw new ChatSDKError(
+          'bad_request:api',
+          `Server returned ${response.status} ${response.statusText}`,
+        );
+      }
     }
 
     return response;
   } catch (error: unknown) {
+    // If it's already a ChatSDKError, re-throw it
+    if (error instanceof ChatSDKError) {
+      throw error;
+    }
+
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       throw new ChatSDKError('offline:chat');
     }
