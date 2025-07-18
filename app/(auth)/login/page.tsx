@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useState, useRef } from 'react';
 import { toast } from '@/components/toast';
 
 import { AuthForm } from '@/components/auth-form';
@@ -16,6 +16,7 @@ export default function Page() {
 
   const [email, setEmail] = useState('');
   const [isSuccessful, setIsSuccessful] = useState(false);
+  const loginHandledRef = useRef(false);
 
   const [state, formAction] = useActionState<LoginActionState, FormData>(
     login,
@@ -34,47 +35,35 @@ export default function Page() {
 
     if (state.status === 'failed') {
       console.log('[Login Page] Login failed - showing error toast');
+      loginHandledRef.current = false; // Reset on failure
       toast({
         type: 'error',
         description: 'Invalid credentials!',
       });
     } else if (state.status === 'invalid_data') {
       console.log('[Login Page] Invalid data - showing error toast');
+      loginHandledRef.current = false; // Reset on failure
       toast({
         type: 'error',
         description: 'Failed validating your submission!',
       });
-    } else if (state.status === 'success') {
-      console.log('[Login Page] Login successful - updating session');
+    } else if (state.status === 'success' && !loginHandledRef.current) {
+      console.log('[Login Page] Login successful - handling redirect');
+      loginHandledRef.current = true; // Mark as handled
       setIsSuccessful(true);
 
-      // Add async handling with proper error catching
-      (async () => {
-        try {
-          console.log('[Login Page] Calling updateSession...');
-          await updateSession();
-          console.log('[Login Page] Session updated, refreshing router...');
-          router.refresh();
-          console.log('[Login Page] Router refreshed, redirecting to home...');
-          // Explicitly redirect to home page
-          router.push('/');
-        } catch (error) {
-          console.error('[Login Page] Error during post-login flow:', error);
-          toast({
-            type: 'error',
-            description:
-              'Login successful but encountered an error. Please refresh the page.',
-          });
-        }
-      })();
+      // Simply reload the page - the middleware will handle the redirect
+      // This avoids conflicts between client-side routing and middleware redirects
+      window.location.href = '/';
     }
-  }, [state.status, router, updateSession]);
+  }, [state.status]);
 
   const handleSubmit = (formData: FormData) => {
     console.log(
       '[Login Page] Form submitted with email:',
       formData.get('email'),
     );
+    loginHandledRef.current = false; // Reset when new login attempt starts
     setEmail(formData.get('email') as string);
     formAction(formData);
   };

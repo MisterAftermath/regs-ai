@@ -14,53 +14,80 @@ export async function middleware(request: NextRequest) {
     return new Response('pong', { status: 200 });
   }
 
+  // Always allow auth API requests
   if (pathname.startsWith('/api/auth')) {
     console.log('[Middleware] Allowing auth API request');
     return NextResponse.next();
   }
 
-  // Allow access to login and register pages without authentication
-  if (['/login', '/register'].includes(pathname)) {
-    console.log('[Middleware] Checking auth status for login/register page');
-  }
+  // Public routes that don't require authentication
+  const publicRoutes = ['/login', '/register'];
+  const isPublicRoute = publicRoutes.includes(pathname);
 
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
-  });
+  try {
+    const token = await getToken({
+      req: request,
+      secret: process.env.AUTH_SECRET,
+      secureCookie: !isDevelopmentEnvironment,
+    });
 
-  console.log('[Middleware] Token present:', !!token, 'Email:', token?.email);
+    console.log('[Middleware] Token present:', !!token, 'Email:', token?.email);
 
-  if (!token) {
-    if (!['/login', '/register'].includes(pathname)) {
+    // No token - handle unauthenticated users
+    if (!token) {
+      // Allow access to public routes
+      if (isPublicRoute) {
+        console.log('[Middleware] No token, allowing access to public route');
+        return NextResponse.next();
+      }
+
+      // Redirect to login for protected routes
       console.log('[Middleware] No token, redirecting to login');
-      // Redirect to login instead of creating guest user
       return NextResponse.redirect(new URL('/login', request.url));
     }
-    console.log('[Middleware] No token, but already on login/register page');
+
+    // Check if guest user
+    const isGuest = guestRegex.test(token?.email ?? '');
+    console.log('[Middleware] Is guest:', isGuest);
+
+    // Handle guest users
+    if (isGuest) {
+      // Allow guest users on login/register pages
+      if (isPublicRoute) {
+        console.log('[Middleware] Guest user on public route, allowing');
+        return NextResponse.next();
+      }
+
+      // Redirect guest users to login from other pages
+      console.log(
+        '[Middleware] Guest user on protected route, redirecting to login',
+      );
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    // Handle authenticated (non-guest) users
+    if (isPublicRoute) {
+      console.log(
+        '[Middleware] Authenticated user on public route, redirecting to home',
+      );
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+
+    // Allow authenticated users to access protected routes
+    console.log(
+      '[Middleware] Authenticated user accessing protected route, allowing',
+    );
     return NextResponse.next();
-  }
+  } catch (error) {
+    console.error('[Middleware] Error getting token:', error);
 
-  const isGuest = guestRegex.test(token?.email ?? '');
-  console.log('[Middleware] Is guest:', isGuest);
+    // On error, allow public routes but protect others
+    if (isPublicRoute) {
+      return NextResponse.next();
+    }
 
-  // Redirect guest users to login (optional - to clean up any existing guest sessions)
-  if (isGuest) {
-    console.log('[Middleware] Guest user detected, redirecting to login');
     return NextResponse.redirect(new URL('/login', request.url));
   }
-
-  // Redirect authenticated users away from login/register pages
-  if (token && !isGuest && ['/login', '/register'].includes(pathname)) {
-    console.log(
-      '[Middleware] Authenticated user on login/register page, redirecting to home',
-    );
-    return NextResponse.redirect(new URL('/', request.url));
-  }
-
-  console.log('[Middleware] Allowing request to proceed');
-  return NextResponse.next();
 }
 
 export const config = {
