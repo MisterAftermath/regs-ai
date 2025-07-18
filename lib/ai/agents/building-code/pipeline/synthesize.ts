@@ -31,12 +31,18 @@ export class SynthesisAgent implements SynthesizeAgent {
     query,
     citations,
     documents,
+    annotations,
   }: {
     query: PipelineState['clarifiedQuery'];
     citations: VerifiedCitation[];
     documents: RetrievedDocument[];
+    annotations?: string;
   }): Promise<PipelineState['synthesizedResponse']> {
     console.log('🔨 Synthesis Phase: Creating response');
+
+    if (annotations) {
+      console.log('📌 Found annotations to apply');
+    }
 
     try {
       // Sort citations: verified first, then unverified
@@ -49,8 +55,8 @@ export class SynthesisAgent implements SynthesizeAgent {
       // Build context for LLM with ALL citations
       const citationContext = this.buildCitationContext(sortedCitations);
 
-      // Create the prompt
-      const userPrompt = `
+      // Create the base prompt
+      const baseUserPrompt = `
 Query: ${query.question}
 Municipality: ${query.municipality || 'Not specified'}
 Property Type: ${query.propertyType || 'Not specified'}
@@ -61,9 +67,20 @@ ${citationContext}
 Please provide a comprehensive answer to the query using only the information from these citations.
       `.trim();
 
+      // Sandwich annotations around user prompt if present
+      const userPrompt = annotations
+        ? `${annotations}\n\n${baseUserPrompt}\n\n${annotations}`
+        : baseUserPrompt;
+
+      // Create system prompt with annotations sandwich
+      const baseSystemPrompt = PHASE_PROMPTS.synthesize.system;
+      const systemPrompt = annotations
+        ? `${annotations}\n\n${baseSystemPrompt}\n\n${annotations}`
+        : baseSystemPrompt;
+
       // Get LLM response
       const response = await this.llm.invoke([
-        { role: 'system', content: PHASE_PROMPTS.synthesize.system },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ]);
 

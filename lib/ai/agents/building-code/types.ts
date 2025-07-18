@@ -125,6 +125,7 @@ export interface SynthesizeAgent
       query: PipelineState['clarifiedQuery'];
       citations: VerifiedCitation[];
       documents: RetrievedDocument[];
+      annotations?: string;
     },
     PipelineState['synthesizedResponse']
   > {}
@@ -171,6 +172,7 @@ export interface BuildingCodeAgent {
       skipClarification?: boolean;
       includeConfidence?: boolean;
       maxSources?: number;
+      annotations?: string; // User annotations from system prompt
     };
   }): Promise<{ content: string; sources?: Source[] }>;
 
@@ -180,6 +182,7 @@ export interface BuildingCodeAgent {
       skipClarification?: boolean;
       includeConfidence?: boolean;
       maxSources?: number;
+      annotations?: string; // User annotations from system prompt
     };
   }): AsyncGenerator<string, void, unknown>;
 }

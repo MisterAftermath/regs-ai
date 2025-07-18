@@ -247,12 +247,30 @@ export function createChromaAgent(): ChromaAgent {
           JSON.stringify(messages, null, 2),
         );
 
+        // Extract system message for annotations
+        const systemMessages = messages.filter((m) => m.role === 'system');
+        const systemContent = systemMessages[0]?.content || '';
+
+        // Extract annotations from system message
+        let annotations = '';
+        if (systemContent?.includes('User Context and Rules:')) {
+          const match = systemContent.match(
+            /User Context and Rules:([\s\S]*?)(?:\n\n|$)/,
+          );
+          if (match) {
+            annotations = match[0].trim();
+          }
+        }
+
         // Find the last user message for the query
         const userMessages = messages.filter((m) => m.role === 'user');
         const lastUserMessage = userMessages[userMessages.length - 1];
         const question = lastUserMessage?.content?.trim() || '';
 
         console.log('❓ Extracted question:', question);
+        if (annotations) {
+          console.log('📌 Found annotations:', annotations);
+        }
 
         if (!question) {
           return {
@@ -309,7 +327,10 @@ export function createChromaAgent(): ChromaAgent {
           ? `You are a regulatory AI assistant specializing in ${jurisdiction.name} land development regulations, including zoning ordinances, subdivision rules, and building codes.`
           : 'You are a regulatory AI assistant specializing in land development regulations, including zoning ordinances, subdivision rules, and building codes.';
 
-        const system_msg = jurisdictionContext;
+        // Sandwich annotations around the system message
+        const system_msg = annotations
+          ? `${annotations}\n\n${jurisdictionContext}\n\n${annotations}`
+          : jurisdictionContext;
 
         const excerpts = metas.map((meta: any, i: number) => {
           const source = meta?.doc_name ?? 'Unknown';
@@ -317,7 +338,12 @@ export function createChromaAgent(): ChromaAgent {
           return `${citation}\n${docs[i]}`;
         });
 
-        const user_prompt = `Use these excerpts to answer the question. Provide citations for each piece of information you use from the excerpts.\n\nExcerpts:\n${excerpts.join('\n\n---\n\n')}\n\nQUESTION: ${question}\n\nAnswer with specific sections and citations based *only* on the excerpts provided.`;
+        // Include annotations at the beginning and end of user prompt too
+        const baseUserPrompt = `Use these excerpts to answer the question. Provide citations for each piece of information you use from the excerpts.\n\nExcerpts:\n${excerpts.join('\n\n---\n\n')}\n\nQUESTION: ${question}\n\nAnswer with specific sections and citations based *only* on the excerpts provided.`;
+
+        const user_prompt = annotations
+          ? `${annotations}\n\n${baseUserPrompt}\n\n${annotations}`
+          : baseUserPrompt;
 
         console.log('🤖 Generating OpenAI response...');
 
@@ -368,12 +394,30 @@ export function createChromaAgent(): ChromaAgent {
           JSON.stringify(messages, null, 2),
         );
 
+        // Extract system message for annotations
+        const systemMessages = messages.filter((m) => m.role === 'system');
+        const systemContent = systemMessages[0]?.content || '';
+
+        // Extract annotations from system message
+        let annotations = '';
+        if (systemContent?.includes('User Context and Rules:')) {
+          const match = systemContent.match(
+            /User Context and Rules:([\s\S]*?)(?:\n\n|$)/,
+          );
+          if (match) {
+            annotations = match[0].trim();
+          }
+        }
+
         // Find the last user message for the query
         const userMessages = messages.filter((m) => m.role === 'user');
         const lastUserMessage = userMessages[userMessages.length - 1];
         const question = lastUserMessage?.content?.trim() || '';
 
         console.log('❓ Extracted question for streaming:', question);
+        if (annotations) {
+          console.log('📌 Found annotations:', annotations);
+        }
 
         if (!question) {
           yield 'Please provide a question about land development regulations.';
@@ -424,7 +468,10 @@ export function createChromaAgent(): ChromaAgent {
           ? `You are a regulatory AI assistant specializing in ${jurisdiction.name} land development regulations, including zoning ordinances, subdivision rules, and building codes.`
           : 'You are a regulatory AI assistant specializing in land development regulations, including zoning ordinances, subdivision rules, and building codes.';
 
-        const system_msg = jurisdictionContext;
+        // Sandwich annotations around the system message
+        const system_msg = annotations
+          ? `${annotations}\n\n${jurisdictionContext}\n\n${annotations}`
+          : jurisdictionContext;
 
         const excerpts = metas.map((meta: any, i: number) => {
           const source = meta?.doc_name ?? 'Unknown';
@@ -432,7 +479,12 @@ export function createChromaAgent(): ChromaAgent {
           return `${citation}\n${docs[i]}`;
         });
 
-        const user_prompt = `Use these excerpts to answer the question. Provide citations for each piece of information you use from the excerpts.\n\nExcerpts:\n${excerpts.join('\n\n---\n\n')}\n\nQUESTION: ${question}\n\nAnswer with specific sections and citations based *only* on the excerpts provided.`;
+        // Include annotations at the beginning and end of user prompt too
+        const baseUserPrompt = `Use these excerpts to answer the question. Provide citations for each piece of information you use from the excerpts.\n\nExcerpts:\n${excerpts.join('\n\n---\n\n')}\n\nQUESTION: ${question}\n\nAnswer with specific sections and citations based *only* on the excerpts provided.`;
+
+        const user_prompt = annotations
+          ? `${annotations}\n\n${baseUserPrompt}\n\n${annotations}`
+          : baseUserPrompt;
 
         // 5) Generate streaming answer
         yield 'Generating response...\n\n';

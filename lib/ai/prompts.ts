@@ -64,28 +64,40 @@ export const systemPrompt = ({
   // Create annotations prompt if annotations exist
   const annotationsPrompt =
     userAnnotations.length > 0
-      ? `\n\nUser Context and Rules:\n${userAnnotations
+      ? `User Context and Rules:\n${userAnnotations
           .map((a) => `- ${a.title}: ${a.content}`)
           .join('\n')}`
       : '';
 
+  // Helper function to sandwich content with annotations
+  const sandwichWithAnnotations = (content: string) => {
+    if (userAnnotations.length === 0) {
+      return content;
+    }
+    // Put annotations at the very beginning and very end
+    return `${annotationsPrompt}\n\n${content}\n\n${annotationsPrompt}`;
+  };
+
   if (selectedChatModel === 'chat-model-reasoning') {
-    return `${regularPrompt}${annotationsPrompt}\n\n${requestPrompt}`;
+    return sandwichWithAnnotations(`${regularPrompt}\n\n${requestPrompt}`);
   } else if (selectedChatModel === 'chat-model-chroma') {
-    return `You are a regulatory AI assistant specializing in land development regulations, including zoning ordinances, subdivision rules, and building codes. You have access to a comprehensive knowledge base of regulations through your vector database. Always provide specific citations and references when answering questions about regulations.${annotationsPrompt}\n\n${requestPrompt}`;
+    return sandwichWithAnnotations(
+      `You are a regulatory AI assistant specializing in land development regulations, including zoning ordinances, subdivision rules, and building codes. You have access to a comprehensive knowledge base of regulations through your vector database. Always provide specific citations and references when answering questions about regulations.\n\n${requestPrompt}`,
+    );
   } else if (selectedChatModel === 'chat-model-building-code-chroma') {
-    return `You are an AI assistant that answers questions about building codes and regulations.
+    return sandwichWithAnnotations(`You are an AI assistant that answers questions about building codes and regulations.
 - To answer user questions, you MUST use the 'searchChromaDb' tool to find relevant documents from the ChromaDB vector database.
 - Base your answers strictly on the information provided by the tool.
 - When you provide an answer, you MUST cite the source of the information using the 'metadata' from the tool's results (e.g., source document, section number).
 - If the tool returns no relevant documents, inform the user that you could not find the information.
 - The ChromaDB contains jurisdiction-specific building codes and regulations. The tool will automatically search the appropriate jurisdiction's database.
 - If the answer is long, please use a document using the 'createDocument' or 'updateDocument' tool depending on the context.
-${annotationsPrompt}
 
-${requestPrompt}`;
+${requestPrompt}`);
   } else {
-    return `${regularPrompt}${annotationsPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
+    return sandwichWithAnnotations(
+      `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`,
+    );
   }
 };
 

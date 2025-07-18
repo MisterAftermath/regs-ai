@@ -36,6 +36,25 @@ export function createBuildingCodeLanguageModel(
     async doGenerate(options: LanguageModelV1CallOptions) {
       console.log('🔧 AI SDK Wrapper: doGenerate called');
 
+      // Extract annotations from system messages
+      const systemMessages = options.prompt.filter(
+        (msg) => msg.role === 'system',
+      );
+      const systemContent = systemMessages[0]?.content || '';
+
+      let annotations = '';
+      if (
+        typeof systemContent === 'string' &&
+        systemContent.includes('User Context and Rules:')
+      ) {
+        const match = systemContent.match(
+          /User Context and Rules:([\s\S]*?)(?:\n\n|$)/,
+        );
+        if (match) {
+          annotations = match[0].trim();
+        }
+      }
+
       // Convert messages to our format
       const messages = options.prompt
         .filter(
@@ -65,6 +84,7 @@ export function createBuildingCodeLanguageModel(
         skipClarification: options.temperature === 0, // Use temperature=0 to skip clarification
         includeConfidence: true,
         maxSources: 5,
+        annotations, // Pass annotations to pipeline
       };
 
       // Call the agent
@@ -91,6 +111,25 @@ export function createBuildingCodeLanguageModel(
      */
     async doStream(options: LanguageModelV1CallOptions) {
       console.log('🔧 AI SDK Wrapper: doStream called');
+
+      // Extract annotations from system messages
+      const systemMessages = options.prompt.filter(
+        (msg) => msg.role === 'system',
+      );
+      const systemContent = systemMessages[0]?.content || '';
+
+      let annotations = '';
+      if (
+        typeof systemContent === 'string' &&
+        systemContent.includes('User Context and Rules:')
+      ) {
+        const match = systemContent.match(
+          /User Context and Rules:([\s\S]*?)(?:\n\n|$)/,
+        );
+        if (match) {
+          annotations = match[0].trim();
+        }
+      }
 
       // Convert messages
       const messages = options.prompt
@@ -121,6 +160,7 @@ export function createBuildingCodeLanguageModel(
         skipClarification: options.temperature === 0,
         includeConfidence: true,
         maxSources: 5,
+        annotations, // Pass annotations to pipeline
       };
 
       if (!agent.stream) {

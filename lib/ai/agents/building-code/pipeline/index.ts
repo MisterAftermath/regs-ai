@@ -34,6 +34,7 @@ export async function executePipeline(
     skipClarification?: boolean;
     includeConfidence?: boolean;
     maxSources?: number;
+    annotations?: string; // User annotations from system prompt
   },
 ): Promise<{
   content: string;
@@ -144,6 +145,7 @@ export async function executePipeline(
       query: state.clarifiedQuery,
       citations: state.verifiedCitations,
       documents: state.retrievedDocuments,
+      annotations: options?.annotations, // Pass annotations to synthesis
     });
 
     state.metadata.phaseTimings.synthesize = Date.now() - synthesizeStart;
@@ -228,6 +230,7 @@ export async function* streamPipeline(
     skipClarification?: boolean;
     includeConfidence?: boolean;
     maxSources?: number;
+    annotations?: string; // User annotations from system prompt
   },
 ): AsyncGenerator<string, void, unknown> {
   try {
