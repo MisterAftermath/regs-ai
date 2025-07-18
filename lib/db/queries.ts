@@ -27,6 +27,8 @@ import {
   type DBMessage,
   type Chat,
   stream,
+  annotation,
+  type Annotation,
 } from './schema';
 import type { ArtifactKind } from '@/components/artifact';
 import { generateUUID } from '../utils';
@@ -779,6 +781,134 @@ export async function getUsageStatsByUserId({ userId }: { userId: string }) {
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to get usage stats by user id',
+    );
+  }
+}
+
+// Annotation queries
+export async function getAnnotationsByUserId(userId: string) {
+  try {
+    return await db
+      .select()
+      .from(annotation)
+      .where(eq(annotation.userId, userId))
+      .orderBy(desc(annotation.createdAt));
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get annotations by user id',
+    );
+  }
+}
+
+export async function getActiveAnnotationsByUserId(userId: string) {
+  try {
+    return await db
+      .select()
+      .from(annotation)
+      .where(and(eq(annotation.userId, userId), eq(annotation.isActive, true)))
+      .orderBy(desc(annotation.createdAt));
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get active annotations by user id',
+    );
+  }
+}
+
+export async function getAnnotationById(id: string) {
+  try {
+    const [result] = await db
+      .select()
+      .from(annotation)
+      .where(eq(annotation.id, id))
+      .limit(1);
+    return result || null;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get annotation by id',
+    );
+  }
+}
+
+export async function createAnnotation({
+  userId,
+  title,
+  content,
+  category,
+}: {
+  userId: string;
+  title: string;
+  content: string;
+  category?: string;
+}) {
+  try {
+    const [newAnnotation] = await db
+      .insert(annotation)
+      .values({
+        userId,
+        title,
+        content,
+        category,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return newAnnotation;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to create annotation',
+    );
+  }
+}
+
+export async function updateAnnotation({
+  id,
+  title,
+  content,
+  category,
+  isActive,
+}: {
+  id: string;
+  title?: string;
+  content?: string;
+  category?: string;
+  isActive?: boolean;
+}) {
+  try {
+    const updateData: any = { updatedAt: new Date() };
+    if (title !== undefined) updateData.title = title;
+    if (content !== undefined) updateData.content = content;
+    if (category !== undefined) updateData.category = category;
+    if (isActive !== undefined) updateData.isActive = isActive;
+
+    const [updatedAnnotation] = await db
+      .update(annotation)
+      .set(updateData)
+      .where(eq(annotation.id, id))
+      .returning();
+    return updatedAnnotation;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to update annotation',
+    );
+  }
+}
+
+export async function deleteAnnotation(id: string) {
+  try {
+    const [deletedAnnotation] = await db
+      .delete(annotation)
+      .where(eq(annotation.id, id))
+      .returning();
+    return deletedAnnotation;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to delete annotation',
     );
   }
 }

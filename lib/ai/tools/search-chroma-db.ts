@@ -4,7 +4,6 @@ import { ChromaClient } from 'chromadb';
 import OpenAI from 'openai';
 import { getJurisdictionCollection } from '../jurisdictions';
 
-const COLLECTION = 'regsai';
 const EMBED_MODEL = 'text-embedding-ada-002';
 
 // Initialize OpenAI client

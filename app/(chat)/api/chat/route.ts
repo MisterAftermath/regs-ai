@@ -17,6 +17,7 @@ import {
   getStreamIdsByChatId,
   saveChat,
   saveMessages,
+  getActiveAnnotationsByUserId,
 } from '@/lib/db/queries';
 import { generateUUID, getTrailingMessageId } from '@/lib/utils';
 import { generateTitleFromUserMessage } from '../../actions';
@@ -135,6 +136,9 @@ export async function POST(request: Request) {
       country,
     };
 
+    // Fetch user annotations
+    const userAnnotations = await getActiveAnnotationsByUserId(session.user.id);
+
     await saveMessages({
       messages: [
         {
@@ -168,7 +172,14 @@ export async function POST(request: Request) {
 
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
-          system: systemPrompt({ selectedChatModel, requestHints }),
+          system: systemPrompt({
+            selectedChatModel,
+            requestHints,
+            userAnnotations: userAnnotations.map((a) => ({
+              title: a.title,
+              content: a.content,
+            })),
+          }),
           messages,
           maxSteps: 5,
           experimental_activeTools:

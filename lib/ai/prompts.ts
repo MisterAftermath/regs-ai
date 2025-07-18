@@ -53,16 +53,26 @@ About the origin of user's request:
 export const systemPrompt = ({
   selectedChatModel,
   requestHints,
+  userAnnotations = [],
 }: {
   selectedChatModel: string;
   requestHints: RequestHints;
+  userAnnotations?: Array<{ title: string; content: string }>;
 }) => {
   const requestPrompt = getRequestPromptFromHints(requestHints);
 
+  // Create annotations prompt if annotations exist
+  const annotationsPrompt =
+    userAnnotations.length > 0
+      ? `\n\nUser Context and Rules:\n${userAnnotations
+          .map((a) => `- ${a.title}: ${a.content}`)
+          .join('\n')}`
+      : '';
+
   if (selectedChatModel === 'chat-model-reasoning') {
-    return `${regularPrompt}\n\n${requestPrompt}`;
+    return `${regularPrompt}${annotationsPrompt}\n\n${requestPrompt}`;
   } else if (selectedChatModel === 'chat-model-chroma') {
-    return `You are a regulatory AI assistant specializing in land development regulations, including zoning ordinances, subdivision rules, and building codes. You have access to a comprehensive knowledge base of regulations through your vector database. Always provide specific citations and references when answering questions about regulations.\n\n${requestPrompt}`;
+    return `You are a regulatory AI assistant specializing in land development regulations, including zoning ordinances, subdivision rules, and building codes. You have access to a comprehensive knowledge base of regulations through your vector database. Always provide specific citations and references when answering questions about regulations.${annotationsPrompt}\n\n${requestPrompt}`;
   } else if (selectedChatModel === 'chat-model-building-code-chroma') {
     return `You are an AI assistant that answers questions about building codes and regulations.
 - To answer user questions, you MUST use the 'searchChromaDb' tool to find relevant documents from the ChromaDB vector database.
@@ -71,10 +81,11 @@ export const systemPrompt = ({
 - If the tool returns no relevant documents, inform the user that you could not find the information.
 - The ChromaDB contains jurisdiction-specific building codes and regulations. The tool will automatically search the appropriate jurisdiction's database.
 - If the answer is long, please use a document using the 'createDocument' or 'updateDocument' tool depending on the context.
+${annotationsPrompt}
 
 ${requestPrompt}`;
   } else {
-    return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
+    return `${regularPrompt}${annotationsPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
   }
 };
 
