@@ -41,9 +41,13 @@ export const {
     Credentials({
       credentials: {},
       async authorize({ email, password }: any) {
+        console.log('[Auth] Authorize called for email:', email);
+
         const users = await getUser(email);
+        console.log('[Auth] Found users:', users.length);
 
         if (users.length === 0) {
+          console.log('[Auth] No user found, comparing with dummy password');
           await compare(password, DUMMY_PASSWORD);
           return null;
         }
@@ -51,14 +55,20 @@ export const {
         const [user] = users;
 
         if (!user.password) {
+          console.log('[Auth] User has no password set');
           await compare(password, DUMMY_PASSWORD);
           return null;
         }
 
+        console.log('[Auth] Comparing passwords...');
         const passwordsMatch = await compare(password, user.password);
 
-        if (!passwordsMatch) return null;
+        if (!passwordsMatch) {
+          console.log('[Auth] Password mismatch');
+          return null;
+        }
 
+        console.log('[Auth] Authentication successful for user:', user.id);
         return { ...user, type: 'regular' };
       },
     }),
@@ -66,6 +76,7 @@ export const {
   ],
   callbacks: {
     async jwt({ token, user }) {
+      console.log('[Auth JWT Callback] Token:', token.id, 'User:', user?.id);
       if (user) {
         token.id = user.id as string;
         token.type = user.type;
@@ -74,6 +85,10 @@ export const {
       return token;
     },
     async session({ session, token }) {
+      console.log(
+        '[Auth Session Callback] Creating session for token:',
+        token.id,
+      );
       if (session.user) {
         session.user.id = token.id;
         session.user.type = token.type;

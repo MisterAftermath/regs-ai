@@ -19,11 +19,18 @@ export const login = async (
   _: LoginActionState,
   formData: FormData,
 ): Promise<LoginActionState> => {
+  console.log('[Login Action] Starting login process...');
+
   try {
     const validatedData = authFormSchema.parse({
       email: formData.get('email'),
       password: formData.get('password'),
     });
+
+    console.log(
+      '[Login Action] Data validated, attempting signIn for:',
+      validatedData.email,
+    );
 
     await signIn('credentials', {
       email: validatedData.email,
@@ -31,12 +38,17 @@ export const login = async (
       redirect: false,
     });
 
+    console.log('[Login Action] SignIn successful');
     return { status: 'success' };
   } catch (error) {
+    console.error('[Login Action] Error during login:', error);
+
     if (error instanceof z.ZodError) {
+      console.log('[Login Action] Validation error:', error.errors);
       return { status: 'invalid_data' };
     }
 
+    console.log('[Login Action] Authentication failed');
     return { status: 'failed' };
   }
 };

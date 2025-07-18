@@ -4,6 +4,7 @@ import { guestRegex, isDevelopmentEnvironment } from './lib/constants';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  console.log('[Middleware] Processing request for:', pathname);
 
   /*
    * Playwright starts the dev server and requires a 200 status to
@@ -14,12 +15,13 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname.startsWith('/api/auth')) {
+    console.log('[Middleware] Allowing auth API request');
     return NextResponse.next();
   }
 
   // Allow access to login and register pages without authentication
   if (['/login', '/register'].includes(pathname)) {
-    return NextResponse.next();
+    console.log('[Middleware] Checking auth status for login/register page');
   }
 
   const token = await getToken({
@@ -28,23 +30,36 @@ export async function middleware(request: NextRequest) {
     secureCookie: !isDevelopmentEnvironment,
   });
 
+  console.log('[Middleware] Token present:', !!token, 'Email:', token?.email);
+
   if (!token) {
-    // Redirect to login instead of creating guest user
-    return NextResponse.redirect(new URL('/login', request.url));
+    if (!['/login', '/register'].includes(pathname)) {
+      console.log('[Middleware] No token, redirecting to login');
+      // Redirect to login instead of creating guest user
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+    console.log('[Middleware] No token, but already on login/register page');
+    return NextResponse.next();
   }
 
   const isGuest = guestRegex.test(token?.email ?? '');
+  console.log('[Middleware] Is guest:', isGuest);
 
   // Redirect guest users to login (optional - to clean up any existing guest sessions)
   if (isGuest) {
+    console.log('[Middleware] Guest user detected, redirecting to login');
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
   // Redirect authenticated users away from login/register pages
   if (token && !isGuest && ['/login', '/register'].includes(pathname)) {
+    console.log(
+      '[Middleware] Authenticated user on login/register page, redirecting to home',
+    );
     return NextResponse.redirect(new URL('/', request.url));
   }
 
+  console.log('[Middleware] Allowing request to proceed');
   return NextResponse.next();
 }
 

@@ -24,27 +24,57 @@ export default function Page() {
     },
   );
 
-  const { update: updateSession } = useSession();
+  const { update: updateSession, status: sessionStatus } = useSession();
+
+  console.log('[Login Page] Current state:', state);
+  console.log('[Login Page] Session status:', sessionStatus);
 
   useEffect(() => {
+    console.log('[Login Page] Effect triggered - state.status:', state.status);
+
     if (state.status === 'failed') {
+      console.log('[Login Page] Login failed - showing error toast');
       toast({
         type: 'error',
         description: 'Invalid credentials!',
       });
     } else if (state.status === 'invalid_data') {
+      console.log('[Login Page] Invalid data - showing error toast');
       toast({
         type: 'error',
         description: 'Failed validating your submission!',
       });
     } else if (state.status === 'success') {
+      console.log('[Login Page] Login successful - updating session');
       setIsSuccessful(true);
-      updateSession();
-      router.refresh();
+
+      // Add async handling with proper error catching
+      (async () => {
+        try {
+          console.log('[Login Page] Calling updateSession...');
+          await updateSession();
+          console.log('[Login Page] Session updated, refreshing router...');
+          router.refresh();
+          console.log('[Login Page] Router refreshed, redirecting to home...');
+          // Explicitly redirect to home page
+          router.push('/');
+        } catch (error) {
+          console.error('[Login Page] Error during post-login flow:', error);
+          toast({
+            type: 'error',
+            description:
+              'Login successful but encountered an error. Please refresh the page.',
+          });
+        }
+      })();
     }
-  }, [state.status]);
+  }, [state.status, router, updateSession]);
 
   const handleSubmit = (formData: FormData) => {
+    console.log(
+      '[Login Page] Form submitted with email:',
+      formData.get('email'),
+    );
     setEmail(formData.get('email') as string);
     formAction(formData);
   };

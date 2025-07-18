@@ -45,9 +45,13 @@ const client = postgres(process.env.POSTGRES_URL!);
 const db = drizzle(client);
 
 export async function getUser(email: string): Promise<Array<User>> {
+  console.log('[DB] Getting user with email:', email);
   try {
-    return await db.select().from(user).where(eq(user.email, email));
+    const users = await db.select().from(user).where(eq(user.email, email));
+    console.log('[DB] Query completed, found users:', users.length);
+    return users;
   } catch (error) {
+    console.error('[DB] Error getting user:', error);
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to get user by email',
