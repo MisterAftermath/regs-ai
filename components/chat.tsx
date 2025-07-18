@@ -20,6 +20,7 @@ import { useSearchParams } from 'next/navigation';
 import { useChatVisibility } from '@/hooks/use-chat-visibility';
 import { useAutoResume } from '@/hooks/use-auto-resume';
 import { ChatSDKError } from '@/lib/errors';
+import { getDefaultJurisdiction } from '@/lib/ai/jurisdictions';
 
 export function Chat({
   id,
@@ -39,6 +40,11 @@ export function Chat({
   autoResume: boolean;
 }) {
   const { mutate } = useSWRConfig();
+
+  // Add jurisdiction state
+  const [jurisdictionId, setJurisdictionId] = useState<string>(
+    getDefaultJurisdiction().id,
+  );
 
   const { visibilityType } = useChatVisibility({
     chatId: id,
@@ -69,6 +75,7 @@ export function Chat({
       message: body.messages.at(-1),
       selectedChatModel: initialChatModel,
       selectedVisibilityType: visibilityType,
+      jurisdictionId, // Add jurisdiction to request
     }),
     onFinish: () => {
       mutate(unstable_serialize(getChatHistoryPaginationKey));
@@ -125,6 +132,8 @@ export function Chat({
           selectedVisibilityType={initialVisibilityType}
           isReadonly={isReadonly}
           session={session}
+          selectedJurisdictionId={jurisdictionId}
+          onJurisdictionChange={setJurisdictionId}
         />
 
         <Messages

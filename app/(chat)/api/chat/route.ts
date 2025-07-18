@@ -4,6 +4,7 @@ import {
   createDataStream,
   smoothStream,
   streamText,
+  tool,
 } from 'ai';
 import { auth, type UserType } from '@/app/(auth)/auth';
 import { type RequestHints, systemPrompt } from '@/lib/ai/prompts';
@@ -73,8 +74,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { id, message, selectedChatModel, selectedVisibilityType } =
-      requestBody;
+    const {
+      id,
+      message,
+      selectedChatModel,
+      selectedVisibilityType,
+      jurisdictionId,
+    } = requestBody;
 
     const session = await auth();
 
@@ -147,6 +153,19 @@ export async function POST(request: Request) {
 
     const stream = createDataStream({
       execute: (dataStream) => {
+        // Create a custom searchChromaDb tool with jurisdiction context
+        const searchChromaDbWithJurisdiction = tool({
+          description: searchChromaDb.description,
+          parameters: searchChromaDb.parameters,
+          execute: async ({
+            query,
+            limit,
+          }: { query: string; limit?: number }) => {
+            // @ts-ignore - jurisdiction is not in the original parameters but we're adding it
+            return searchChromaDb.execute({ query, jurisdictionId, limit });
+          },
+        });
+
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
           system: systemPrompt({ selectedChatModel, requestHints }),
@@ -175,7 +194,7 @@ export async function POST(request: Request) {
           experimental_transform: smoothStream({ chunking: 'word' }),
           experimental_generateMessageId: generateUUID,
           tools: {
-            searchChromaDb,
+            searchChromaDb: searchChromaDbWithJurisdiction,
             getWeather,
             createDocument: createDocument({ session, dataStream }),
             updateDocument: updateDocument({ session, dataStream }),

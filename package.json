@@ -16,7 +16,8 @@
     "db:pull": "drizzle-kit pull",
     "db:check": "drizzle-kit check",
     "db:up": "drizzle-kit up",
-    "test": "export PLAYWRIGHT=True && npm exec playwright test"
+    "test": "export PLAYWRIGHT=True && npm exec playwright test",
+    "manage-jurisdictions": "tsx scripts/manage-jurisdictions.ts"
   },
   "dependencies": {
     "@ai-sdk/react": "^1.2.11",

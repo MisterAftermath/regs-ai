@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useWindowSize } from 'usehooks-ts';
 
 import { ModelSelector } from '@/components/model-selector';
+import { JurisdictionSelector } from '@/components/jurisdiction-selector';
 import { SidebarToggle } from '@/components/sidebar-toggle';
 import { Button } from '@/components/ui/button';
 import { PlusIcon, VercelIcon } from './icons';
@@ -20,17 +21,26 @@ function PureChatHeader({
   selectedVisibilityType,
   isReadonly,
   session,
+  selectedJurisdictionId,
+  onJurisdictionChange,
 }: {
   chatId: string;
   selectedModelId: string;
   selectedVisibilityType: VisibilityType;
   isReadonly: boolean;
   session: Session;
+  selectedJurisdictionId?: string;
+  onJurisdictionChange?: (value: string) => void;
 }) {
   const router = useRouter();
   const { open } = useSidebar();
 
   const { width: windowWidth } = useWindowSize();
+
+  // Check if we're using a jurisdiction-based model
+  const isJurisdictionModel =
+    selectedModelId === 'chat-model-building-code-chroma' ||
+    selectedModelId === 'chat-model-chroma';
 
   return (
     <header className="flex sticky top-0 bg-background py-1.5 items-center px-2 md:px-2 gap-2 border-b-2">
@@ -63,11 +73,19 @@ function PureChatHeader({
         />
       )}
 
+      {!isReadonly && isJurisdictionModel && onJurisdictionChange && (
+        <JurisdictionSelector
+          value={selectedJurisdictionId}
+          onValueChange={onJurisdictionChange}
+          className="order-1 md:order-3"
+        />
+      )}
+
       {!isReadonly && (
         <VisibilitySelector
           chatId={chatId}
           selectedVisibilityType={selectedVisibilityType}
-          className="order-1 md:order-3"
+          className="order-1 md:order-4"
         />
       )}
     </header>
@@ -75,5 +93,8 @@ function PureChatHeader({
 }
 
 export const ChatHeader = memo(PureChatHeader, (prevProps, nextProps) => {
-  return prevProps.selectedModelId === nextProps.selectedModelId;
+  return (
+    prevProps.selectedModelId === nextProps.selectedModelId &&
+    prevProps.selectedJurisdictionId === nextProps.selectedJurisdictionId
+  );
 });

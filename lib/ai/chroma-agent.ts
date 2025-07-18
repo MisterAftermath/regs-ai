@@ -6,9 +6,12 @@ import type { CoreMessage } from 'ai';
 import type { UIMessage } from 'ai';
 import OpenAI from 'openai';
 import { ChromaClient } from 'chromadb';
+import {
+  getJurisdictionCollection,
+  getJurisdictionById,
+} from './jurisdictions';
 
 // ─── CONFIG ────────────────────────────────────────────────────────────────
-const COLLECTION = 'regsai';
 const EMBED_MODEL = 'text-embedding-ada-002';
 const CHAT_MODEL = 'gpt-4o';
 const TOP_K = 3;
@@ -49,12 +52,14 @@ const getChromaConfig = () => {
 
 // Define the interface for your Langchain agent
 export interface ChromaAgent {
-  invoke: (input: { messages: UIMessage[] }) => Promise<{ content: string }>;
-  stream?: (input: { messages: UIMessage[] }) => AsyncGenerator<
-    string,
-    void,
-    unknown
-  >;
+  invoke: (input: {
+    messages: UIMessage[];
+    jurisdictionId?: string;
+  }) => Promise<{ content: string }>;
+  stream?: (input: {
+    messages: UIMessage[];
+    jurisdictionId?: string;
+  }) => AsyncGenerator<string, void, unknown>;
 }
 
 // Helper function to convert AI SDK prompt to UIMessage format
@@ -235,7 +240,7 @@ export function createChromaAgent(): ChromaAgent {
   const client = new ChromaClient(getChromaConfig());
 
   return {
-    async invoke({ messages }) {
+    async invoke({ messages, jurisdictionId }) {
       try {
         console.log(
           '🚀 ChromaAgent invoke called with messages:',
@@ -252,13 +257,20 @@ export function createChromaAgent(): ChromaAgent {
         if (!question) {
           return {
             content:
-              'Please provide a question about Houston land development regulations.',
+              'Please provide a question about land development regulations.',
           };
         }
 
+        // Get the appropriate collection based on jurisdiction
+        const collectionName = getJurisdictionCollection(jurisdictionId);
+        const jurisdiction = jurisdictionId
+          ? getJurisdictionById(jurisdictionId)
+          : undefined;
+
+        console.log(`📊 Getting ChromaDB collection: ${collectionName}`);
+
         // 1) Get collection
-        console.log('📊 Getting ChromaDB collection...');
-        const collection = await client.getCollection({ name: COLLECTION });
+        const collection = await client.getCollection({ name: collectionName });
 
         // 2) Embed the question
         console.log('🧠 Creating embedding for question...');
@@ -293,7 +305,11 @@ export function createChromaAgent(): ChromaAgent {
         }
 
         // 4) Build prompt with citations
-        const system_msg = `You are a regulatory AI assistant specializing in City of Houston land development regulations, including zoning ordinances (Chapter 42), subdivision rules, and building codes.`;
+        const jurisdictionContext = jurisdiction
+          ? `You are a regulatory AI assistant specializing in ${jurisdiction.name} land development regulations, including zoning ordinances, subdivision rules, and building codes.`
+          : 'You are a regulatory AI assistant specializing in land development regulations, including zoning ordinances, subdivision rules, and building codes.';
+
+        const system_msg = jurisdictionContext;
 
         const excerpts = metas.map((meta: any, i: number) => {
           const source = meta?.doc_name ?? 'Unknown';
@@ -345,7 +361,7 @@ export function createChromaAgent(): ChromaAgent {
     },
 
     // Implement streaming support
-    async *stream({ messages }) {
+    async *stream({ messages, jurisdictionId }) {
       try {
         console.log(
           '🚀 ChromaAgent stream called with messages:',
@@ -360,15 +376,24 @@ export function createChromaAgent(): ChromaAgent {
         console.log('❓ Extracted question for streaming:', question);
 
         if (!question) {
-          yield 'Please provide a question about Houston land development regulations.';
+          yield 'Please provide a question about land development regulations.';
           return;
         }
 
+        // Get the appropriate collection based on jurisdiction
+        const collectionName = getJurisdictionCollection(jurisdictionId);
+        const jurisdiction = jurisdictionId
+          ? getJurisdictionById(jurisdictionId)
+          : undefined;
+        const jurisdictionName = jurisdiction?.name || '';
+
         // Show progress to user
-        yield 'Searching Houston land development regulations... ';
+        yield jurisdiction
+          ? `Searching ${jurisdictionName} land development regulations... `
+          : 'Searching land development regulations... ';
 
         // 1) Get collection
-        const collection = await client.getCollection({ name: COLLECTION });
+        const collection = await client.getCollection({ name: collectionName });
 
         // 2) Embed the question
         yield 'Analyzing your question... ';
@@ -395,7 +420,11 @@ export function createChromaAgent(): ChromaAgent {
         }
 
         // 4) Build prompt with citations
-        const system_msg = `You are a regulatory AI assistant specializing in City of Houston land development regulations, including zoning ordinances (Chapter 42), subdivision rules, and building codes.`;
+        const jurisdictionContext = jurisdiction
+          ? `You are a regulatory AI assistant specializing in ${jurisdiction.name} land development regulations, including zoning ordinances, subdivision rules, and building codes.`
+          : 'You are a regulatory AI assistant specializing in land development regulations, including zoning ordinances, subdivision rules, and building codes.';
+
+        const system_msg = jurisdictionContext;
 
         const excerpts = metas.map((meta: any, i: number) => {
           const source = meta?.doc_name ?? 'Unknown';

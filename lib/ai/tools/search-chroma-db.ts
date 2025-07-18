@@ -2,6 +2,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { ChromaClient } from 'chromadb';
 import OpenAI from 'openai';
+import { getJurisdictionCollection } from '../jurisdictions';
 
 const COLLECTION = 'regsai';
 const EMBED_MODEL = 'text-embedding-ada-002';
@@ -19,20 +20,32 @@ const client = new ChromaClient({
 
 export const searchChromaDb = tool({
   description:
-    'Search the ChromaDB vector database for building codes and regulations, specifically Title 42 information. Use this to answer any user questions about regulations.',
+    'Search the ChromaDB vector database for building codes and regulations. Use this to answer any user questions about regulations for specific jurisdictions.',
   parameters: z.object({
     query: z.string().describe('The search query to find relevant documents.'),
+    jurisdictionId: z
+      .string()
+      .optional()
+      .describe(
+        'The ID of the jurisdiction to search (e.g., "houston", "austin"). If not provided, uses the default jurisdiction.',
+      ),
     limit: z
       .number()
       .optional()
       .default(5)
       .describe('The maximum number of relevant documents to return.'),
   }),
-  execute: async ({ query, limit }) => {
-    console.log(`Searching ChromaDB with query: "${query}"`);
+  execute: async ({ query, jurisdictionId, limit }) => {
+    // Get the collection name based on jurisdiction
+    const collectionName = getJurisdictionCollection(jurisdictionId);
+
+    console.log(
+      `Searching ChromaDB collection "${collectionName}" with query: "${query}"`,
+    );
+
     try {
       // 1. Get collection
-      const collection = await client.getCollection({ name: COLLECTION });
+      const collection = await client.getCollection({ name: collectionName });
 
       // 2. Embed the question using OpenAI
       const embeddingResponse = await openai.embeddings.create({

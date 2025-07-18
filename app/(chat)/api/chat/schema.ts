@@ -31,6 +31,7 @@ export const postRequestBodySchema = z.object({
     'chat-model-building-code-chroma',
   ]),
   selectedVisibilityType: z.enum(['public', 'private']),
+  jurisdictionId: z.string().optional(),
 });
 
 export type PostRequestBody = z.infer<typeof postRequestBodySchema>;
