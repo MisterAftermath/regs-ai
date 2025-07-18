@@ -536,3 +536,252 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
     );
   }
 }
+<<<<<<< HEAD
+=======
+
+// Usage statistics queries
+export async function getAllUsersUsageStats() {
+  try {
+    const users = await db.select().from(user).orderBy(asc(user.email));
+
+    const userStats = await Promise.all(
+      users.map(async (u) => {
+        // Get chat stats
+        const [chatStats] = await db
+          .select({ count: count(chat.id) })
+          .from(chat)
+          .where(eq(chat.userId, u.id))
+          .execute();
+
+        // Get message stats
+        const [messageStats] = await db
+          .select({ count: count(message.id) })
+          .from(message)
+          .innerJoin(chat, eq(message.chatId, chat.id))
+          .where(and(eq(chat.userId, u.id), eq(message.role, 'user')))
+          .execute();
+
+        // Get document stats
+        const [documentStats] = await db
+          .select({ count: count(document.id) })
+          .from(document)
+          .where(eq(document.userId, u.id))
+          .execute();
+
+        // Get suggestion stats
+        const [suggestionStats] = await db
+          .select({ count: count(suggestion.id) })
+          .from(suggestion)
+          .where(eq(suggestion.userId, u.id))
+          .execute();
+
+        // Get vote stats
+        const [voteStats] = await db
+          .select({ count: count(vote.messageId) })
+          .from(vote)
+          .innerJoin(chat, eq(vote.chatId, chat.id))
+          .where(eq(chat.userId, u.id))
+          .execute();
+
+        // Get latest activity
+        const [latestChat] = await db
+          .select({ createdAt: chat.createdAt })
+          .from(chat)
+          .where(eq(chat.userId, u.id))
+          .orderBy(desc(chat.createdAt))
+          .limit(1)
+          .execute();
+
+        const [latestMessage] = await db
+          .select({ createdAt: message.createdAt })
+          .from(message)
+          .innerJoin(chat, eq(message.chatId, chat.id))
+          .where(and(eq(chat.userId, u.id), eq(message.role, 'user')))
+          .orderBy(desc(message.createdAt))
+          .limit(1)
+          .execute();
+
+        // Get messages in last 24 hours
+        const messagesLast24h = await getMessageCountByUserId({
+          id: u.id,
+          differenceInHours: 24,
+        });
+
+        return {
+          id: u.id,
+          email: u.email,
+          isGuest: u.email.startsWith('guest-'),
+          stats: {
+            totalChats: chatStats?.count ?? 0,
+            totalMessages: messageStats?.count ?? 0,
+            totalDocuments: documentStats?.count ?? 0,
+            totalSuggestions: suggestionStats?.count ?? 0,
+            totalVotes: voteStats?.count ?? 0,
+            messagesLast24h,
+            lastChatAt: latestChat?.createdAt ?? null,
+            lastMessageAt: latestMessage?.createdAt ?? null,
+            lastActiveAt:
+              latestMessage?.createdAt ?? latestChat?.createdAt ?? null,
+          },
+        };
+      }),
+    );
+
+    return userStats;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get all users usage stats',
+    );
+  }
+}
+
+export async function getUsageStatsByUserId({ userId }: { userId: string }) {
+  try {
+    const [targetUser] = await db
+      .select()
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1);
+
+    if (!targetUser) {
+      throw new ChatSDKError('not_found:database', 'User not found');
+    }
+
+    // Get detailed stats for a specific user
+    const [totalChatStats] = await db
+      .select({ count: count(chat.id) })
+      .from(chat)
+      .where(eq(chat.userId, userId))
+      .execute();
+
+    const [publicChatStats] = await db
+      .select({ count: count(chat.id) })
+      .from(chat)
+      .where(and(eq(chat.userId, userId), eq(chat.visibility, 'public')))
+      .execute();
+
+    const [privateChatStats] = await db
+      .select({ count: count(chat.id) })
+      .from(chat)
+      .where(and(eq(chat.userId, userId), eq(chat.visibility, 'private')))
+      .execute();
+
+    const [totalMessageStats] = await db
+      .select({ count: count(message.id) })
+      .from(message)
+      .innerJoin(chat, eq(message.chatId, chat.id))
+      .where(eq(chat.userId, userId))
+      .execute();
+
+    const [userMessageStats] = await db
+      .select({ count: count(message.id) })
+      .from(message)
+      .innerJoin(chat, eq(message.chatId, chat.id))
+      .where(and(eq(chat.userId, userId), eq(message.role, 'user')))
+      .execute();
+
+    const [assistantMessageStats] = await db
+      .select({ count: count(message.id) })
+      .from(message)
+      .innerJoin(chat, eq(message.chatId, chat.id))
+      .where(and(eq(chat.userId, userId), eq(message.role, 'assistant')))
+      .execute();
+
+    const [totalDocStats] = await db
+      .select({ count: count(document.id) })
+      .from(document)
+      .where(eq(document.userId, userId))
+      .execute();
+
+    const [textDocStats] = await db
+      .select({ count: count(document.id) })
+      .from(document)
+      .where(and(eq(document.userId, userId), eq(document.kind, 'text')))
+      .execute();
+
+    const [codeDocStats] = await db
+      .select({ count: count(document.id) })
+      .from(document)
+      .where(and(eq(document.userId, userId), eq(document.kind, 'code')))
+      .execute();
+
+    const [imageDocStats] = await db
+      .select({ count: count(document.id) })
+      .from(document)
+      .where(and(eq(document.userId, userId), eq(document.kind, 'image')))
+      .execute();
+
+    const [sheetDocStats] = await db
+      .select({ count: count(document.id) })
+      .from(document)
+      .where(and(eq(document.userId, userId), eq(document.kind, 'sheet')))
+      .execute();
+
+    // Get daily message counts for the last 7 days
+    const dailyMessages = await Promise.all(
+      Array.from({ length: 7 }, (_, i) => {
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - i);
+        startDate.setHours(0, 0, 0, 0);
+
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 1);
+
+        return db
+          .select({
+            count: count(message.id),
+          })
+          .from(message)
+          .innerJoin(chat, eq(message.chatId, chat.id))
+          .where(
+            and(
+              eq(chat.userId, userId),
+              eq(message.role, 'user'),
+              gte(message.createdAt, startDate),
+              lt(message.createdAt, endDate),
+            ),
+          )
+          .execute()
+          .then(([result]) => ({
+            date: startDate.toISOString().split('T')[0],
+            count: result?.count ?? 0,
+          }));
+      }),
+    );
+
+    return {
+      user: {
+        id: targetUser.id,
+        email: targetUser.email,
+        isGuest: targetUser.email.startsWith('guest-'),
+      },
+      stats: {
+        chats: {
+          total: totalChatStats?.count ?? 0,
+          public: publicChatStats?.count ?? 0,
+          private: privateChatStats?.count ?? 0,
+        },
+        messages: {
+          total: totalMessageStats?.count ?? 0,
+          userMessages: userMessageStats?.count ?? 0,
+          assistantMessages: assistantMessageStats?.count ?? 0,
+        },
+        documents: {
+          total: totalDocStats?.count ?? 0,
+          text: textDocStats?.count ?? 0,
+          code: codeDocStats?.count ?? 0,
+          image: imageDocStats?.count ?? 0,
+          sheet: sheetDocStats?.count ?? 0,
+        },
+        dailyMessages: dailyMessages.reverse(),
+      },
+    };
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get usage stats by user id',
+    );
+  }
+}
+>>>>>>> usage-added

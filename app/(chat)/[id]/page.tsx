@@ -6,6 +6,7 @@ import { Chat } from '@/components/chat';
 import { getChatById, getMessagesByChatId } from '@/lib/db/queries';
 import { DataStreamHandler } from '@/components/data-stream-handler';
 import { DEFAULT_CHAT_MODEL } from '@/lib/ai/models';
+import { isAdminUser } from '@/lib/utils';
 import type { DBMessage } from '@/lib/db/schema';
 import type { Attachment, UIMessage } from 'ai';
 
@@ -29,7 +30,10 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
       return notFound();
     }
 
-    if (session.user.id !== chat.userId) {
+    const isAdmin = isAdminUser(session.user.email);
+    const isOwner = session.user.id === chat.userId;
+
+    if (!isOwner && !isAdmin) {
       return notFound();
     }
   }

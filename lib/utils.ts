@@ -117,3 +117,23 @@ export function extractTextFromContent(
 
   return '';
 }
+
+export function px(value: number) {
+  return `${value / 16}rem`;
+}
+
+export function isAdminUser(email: string | null | undefined): boolean {
+  if (!email) return false;
+
+  // Define admin emails or patterns here
+  // For now, let's use a simple approach - you can customize this
+  const adminEmails = [
+    'randommason3@gmail.com',
+    // Add more admin emails here
+  ];
+
+  // Check if email is in admin list
+  if (adminEmails.includes(email)) return true;
+
+  return false;
+}
