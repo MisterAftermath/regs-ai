@@ -62,14 +62,7 @@ export const {
         return { ...user, type: 'regular' };
       },
     }),
-    Credentials({
-      id: 'guest',
-      credentials: {},
-      async authorize() {
-        const [guestUser] = await createGuestUser();
-        return { ...guestUser, type: 'guest' };
-      },
-    }),
+    // Guest provider removed - no longer supporting guest users
   ],
   callbacks: {
     async jwt({ token, user }) {

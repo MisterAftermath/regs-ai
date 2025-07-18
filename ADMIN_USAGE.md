@@ -16,18 +16,8 @@ export function isAdminUser(email: string | null | undefined): boolean {
 
   // Define admin emails or patterns here
   const adminEmails = [
-    "admin@example.com",
     "your-email@domain.com", // Add your admin emails here
   ];
-
-  // Check if email is in admin list
-  if (adminEmails.includes(email)) return true;
-
-  // Or check for a pattern (e.g., all emails ending with @admin.com)
-  if (email.endsWith("@admin.com")) return true;
-
-  // Or check for a specific prefix
-  if (email.startsWith("admin-")) return true;
 
   return false;
 }
