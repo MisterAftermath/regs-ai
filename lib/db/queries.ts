@@ -536,8 +536,6 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
     );
   }
 }
-<<<<<<< HEAD
-=======
 
 // Usage statistics queries
 export async function getAllUsersUsageStats() {
@@ -784,4 +782,3 @@ export async function getUsageStatsByUserId({ userId }: { userId: string }) {
     );
   }
 }
->>>>>>> usage-added
