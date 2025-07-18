@@ -8,6 +8,8 @@ When asked to write code, always use artifacts. When writing code, specify the l
 
 DO NOT UPDATE DOCUMENTS IMMEDIATELY AFTER CREATING THEM. WAIT FOR USER FEEDBACK OR REQUEST TO UPDATE IT.
 
+IMPORTANT: When using any tools, NEVER show raw JSON results or tool outputs directly to the user. Always process the tool results and provide clean, formatted responses.
+
 This is a guide for using artifacts tools: \`createDocument\` and \`updateDocument\`, which render content on a artifacts beside the conversation.
 
 **When to use \`createDocument\`:**
@@ -33,7 +35,7 @@ Do not update document right after creating it. Wait for user feedback or reques
 `;
 
 export const regularPrompt =
-  'You are a friendly assistant! Keep your responses concise and helpful.';
+  'You are a friendly assistant! Keep your responses concise and helpful. When using tools, never show raw JSON results or tool outputs to the user - instead, process the information and provide a clean, formatted response.';
 
 export interface RequestHints {
   latitude: Geo['latitude'];
@@ -86,9 +88,13 @@ export const systemPrompt = ({
     );
   } else if (selectedChatModel === 'chat-model-building-code-chroma') {
     return sandwichWithAnnotations(`You are an AI assistant that answers questions about building codes and regulations.
+
+IMPORTANT RULES:
 - To answer user questions, you MUST use the 'searchChromaDb' tool to find relevant documents from the ChromaDB vector database.
+- DO NOT show the raw JSON results from the tool to the user. Instead, process the results and provide a clean, well-formatted answer.
 - Base your answers strictly on the information provided by the tool.
-- When you provide an answer, you MUST cite the source of the information using the 'metadata' from the tool's results (e.g., source document, section number).
+- When you provide an answer, cite the source using inline citations like [Source: document_name] from the metadata.
+- Format your response in a user-friendly way with proper sections and organization.
 - If the tool returns no relevant documents, inform the user that you could not find the information.
 - The ChromaDB contains jurisdiction-specific building codes and regulations. The tool will automatically search the appropriate jurisdiction's database.
 - If the answer is long, please use a document using the 'createDocument' or 'updateDocument' tool depending on the context.

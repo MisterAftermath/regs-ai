@@ -212,9 +212,10 @@ const PurePreviewMessage = ({
                           result={result}
                           isReadonly={isReadonly}
                         />
-                      ) : (
-                        <pre>{JSON.stringify(result, null, 2)}</pre>
-                      )}
+                      ) : toolName ===
+                        'searchChromaDb' ? // Hide ChromaDB search results - they should only be used internally by the AI
+                      null : //<pre>{JSON.stringify(result, null, 2)}</pre>
+                      null}
                     </div>
                   );
                 }

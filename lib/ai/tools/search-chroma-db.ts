@@ -70,8 +70,17 @@ export const searchChromaDb = tool({
         metadata: results.metadatas[0][index],
       }));
 
+      // Return as a formatted string instead of JSON to prevent raw display
+      const resultsText = formattedResults
+        .map((result, index) => {
+          const metadata = result.metadata || {};
+          const source = metadata.doc_name || `Document ${index + 1}`;
+          return `[Source: ${source}]\n${result.content}`;
+        })
+        .join('\n\n---\n\n');
+
       return {
-        results: formattedResults,
+        results: resultsText,
       };
     } catch (error) {
       console.error('Error executing searchChromaDb tool:', error);

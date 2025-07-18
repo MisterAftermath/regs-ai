@@ -316,9 +316,9 @@ export function createChromaAgent(): ChromaAgent {
 
         if (docs.length === 0) {
           console.log('⚠️ No documents found in search results');
+          const jurisdictionName = jurisdiction?.name || 'the';
           return {
-            content:
-              'I could not find any relevant information in the Houston regulations database. Please ensure the database is properly populated.',
+            content: `I could not find any relevant information in ${jurisdictionName} regulations database. Please ensure the database is properly populated or try rephrasing your question.`,
           };
         }
 
@@ -327,10 +327,20 @@ export function createChromaAgent(): ChromaAgent {
           ? `You are a regulatory AI assistant specializing in ${jurisdiction.name} land development regulations, including zoning ordinances, subdivision rules, and building codes.`
           : 'You are a regulatory AI assistant specializing in land development regulations, including zoning ordinances, subdivision rules, and building codes.';
 
+        // Enhanced system prompt with formatting instructions
+        const systemInstructions = `${jurisdictionContext}
+
+IMPORTANT FORMATTING RULES:
+1. Provide clear, well-structured answers without showing raw excerpts
+2. Use inline citations in the format [Source: document_name]
+3. Organize your response with clear sections when appropriate
+4. Be concise but comprehensive
+5. Focus on directly answering the user's question`;
+
         // Sandwich annotations around the system message
         const system_msg = annotations
-          ? `${annotations}\n\n${jurisdictionContext}\n\n${annotations}`
-          : jurisdictionContext;
+          ? `${annotations}\n\n${systemInstructions}\n\n${annotations}`
+          : systemInstructions;
 
         const excerpts = metas.map((meta: any, i: number) => {
           const source = meta?.doc_name ?? 'Unknown';
@@ -339,7 +349,15 @@ export function createChromaAgent(): ChromaAgent {
         });
 
         // Include annotations at the beginning and end of user prompt too
-        const baseUserPrompt = `Use these excerpts to answer the question. Provide citations for each piece of information you use from the excerpts.\n\nExcerpts:\n${excerpts.join('\n\n---\n\n')}\n\nQUESTION: ${question}\n\nAnswer with specific sections and citations based *only* on the excerpts provided.`;
+        const baseUserPrompt = `Based on the following regulatory excerpts, please answer the question. 
+DO NOT include the raw excerpts in your response. Instead, provide a clean, well-formatted answer with inline citations.
+
+EXCERPTS FOR YOUR REFERENCE (DO NOT INCLUDE THESE IN YOUR RESPONSE):
+${excerpts.join('\n\n---\n\n')}
+
+QUESTION: ${question}
+
+Please provide a clear, direct answer with inline citations [Source: document_name] for each piece of information used.`;
 
         const user_prompt = annotations
           ? `${annotations}\n\n${baseUserPrompt}\n\n${annotations}`
@@ -459,7 +477,8 @@ export function createChromaAgent(): ChromaAgent {
         const metas = results.metadatas[0] || [];
 
         if (docs.length === 0) {
-          yield 'I could not find any relevant information in the Houston regulations database. Please ensure the database is properly populated.';
+          const jurisdictionName = jurisdiction?.name || 'the';
+          yield `I could not find any relevant information in ${jurisdictionName} regulations database. Please ensure the database is properly populated or try rephrasing your question.`;
           return;
         }
 
@@ -468,10 +487,20 @@ export function createChromaAgent(): ChromaAgent {
           ? `You are a regulatory AI assistant specializing in ${jurisdiction.name} land development regulations, including zoning ordinances, subdivision rules, and building codes.`
           : 'You are a regulatory AI assistant specializing in land development regulations, including zoning ordinances, subdivision rules, and building codes.';
 
+        // Enhanced system prompt with formatting instructions
+        const systemInstructions = `${jurisdictionContext}
+
+IMPORTANT FORMATTING RULES:
+1. Provide clear, well-structured answers without showing raw excerpts
+2. Use inline citations in the format [Source: document_name]
+3. Organize your response with clear sections when appropriate
+4. Be concise but comprehensive
+5. Focus on directly answering the user's question`;
+
         // Sandwich annotations around the system message
         const system_msg = annotations
-          ? `${annotations}\n\n${jurisdictionContext}\n\n${annotations}`
-          : jurisdictionContext;
+          ? `${annotations}\n\n${systemInstructions}\n\n${annotations}`
+          : systemInstructions;
 
         const excerpts = metas.map((meta: any, i: number) => {
           const source = meta?.doc_name ?? 'Unknown';
@@ -480,7 +509,15 @@ export function createChromaAgent(): ChromaAgent {
         });
 
         // Include annotations at the beginning and end of user prompt too
-        const baseUserPrompt = `Use these excerpts to answer the question. Provide citations for each piece of information you use from the excerpts.\n\nExcerpts:\n${excerpts.join('\n\n---\n\n')}\n\nQUESTION: ${question}\n\nAnswer with specific sections and citations based *only* on the excerpts provided.`;
+        const baseUserPrompt = `Based on the following regulatory excerpts, please answer the question. 
+DO NOT include the raw excerpts in your response. Instead, provide a clean, well-formatted answer with inline citations.
+
+EXCERPTS FOR YOUR REFERENCE (DO NOT INCLUDE THESE IN YOUR RESPONSE):
+${excerpts.join('\n\n---\n\n')}
+
+QUESTION: ${question}
+
+Please provide a clear, direct answer with inline citations [Source: document_name] for each piece of information used.`;
 
         const user_prompt = annotations
           ? `${annotations}\n\n${baseUserPrompt}\n\n${annotations}`
