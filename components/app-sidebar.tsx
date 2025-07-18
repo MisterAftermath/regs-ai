@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import { Separator } from './ui/separator';
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
@@ -59,9 +60,21 @@ export function AppSidebar({ user }: { user: User | undefined }) {
           </div>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>
-        <SidebarHistory user={user} />
-        {user && <AnnotationsSection />}
+      <SidebarContent className="flex flex-col p-0 gap-0">
+        {/* Chat history section - takes up available space */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <SidebarHistory user={user} />
+        </div>
+
+        {/* Annotations section - fixed height with its own scroll */}
+        {user && (
+          <>
+            <Separator className="my-0" />
+            <div className="flex-shrink-0 h-[35vh] min-h-[200px] max-h-[400px] overflow-y-auto">
+              <AnnotationsSection />
+            </div>
+          </>
+        )}
       </SidebarContent>
       <SidebarFooter>{user && <SidebarUserNav user={user} />}</SidebarFooter>
     </Sidebar>

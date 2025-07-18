@@ -75,48 +75,50 @@ export function AnnotationsSection() {
 
   return (
     <>
-      <SidebarGroup>
-        <SidebarGroupLabel>
-          <div className="flex items-center justify-between w-full">
-            <span>Annotations</span>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={handleCreate}
-              className="h-6 w-6"
-            >
-              <PlusIcon size={14} />
-              <span className="sr-only">Add annotation</span>
-            </Button>
-          </div>
-        </SidebarGroupLabel>
-        <SidebarGroupContent>
-          <SidebarMenu>
-            {isLoading ? (
-              <div className="space-y-2 px-2">
-                <Skeleton className="h-16 w-full" />
-                <Skeleton className="h-16 w-full" />
-              </div>
-            ) : annotations.length === 0 ? (
-              <div className="px-2 py-4 text-center text-sm text-muted-foreground">
-                No annotations yet. Add custom context for the AI to consider.
-              </div>
-            ) : (
-              <div className="space-y-2 px-2">
-                {annotations.map((annotation) => (
-                  <AnnotationItem
-                    key={annotation.id}
-                    annotation={annotation}
-                    onEdit={handleEdit}
-                    onDelete={setDeleteId}
-                    onToggle={toggleAnnotation}
-                  />
-                ))}
-              </div>
-            )}
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
+      <div className="h-full bg-muted/20">
+        <SidebarGroup className="h-full">
+          <SidebarGroupLabel className="sticky top-0 bg-sidebar z-10">
+            <div className="flex items-center justify-between w-full">
+              <span>Annotations</span>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={handleCreate}
+                className="h-6 w-6"
+              >
+                <PlusIcon size={14} />
+                <span className="sr-only">Add annotation</span>
+              </Button>
+            </div>
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {isLoading ? (
+                <div className="space-y-2 px-2">
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                </div>
+              ) : annotations.length === 0 ? (
+                <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+                  No annotations yet. Add custom context for the AI to consider.
+                </div>
+              ) : (
+                <div className="space-y-2 px-2 pb-2">
+                  {annotations.map((annotation) => (
+                    <AnnotationItem
+                      key={annotation.id}
+                      annotation={annotation}
+                      onEdit={handleEdit}
+                      onDelete={setDeleteId}
+                      onToggle={toggleAnnotation}
+                    />
+                  ))}
+                </div>
+              )}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </div>
 
       <AnnotationEditor
         open={editorOpen}
