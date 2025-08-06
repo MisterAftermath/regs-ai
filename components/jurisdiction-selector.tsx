@@ -66,7 +66,7 @@ export function JurisdictionSelector({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
-        className="min-w-[240px] max-w-[300px]"
+        className="min-w-[200px] max-w-[300px] sm:min-w-[240px]"
       >
         {Object.entries(jurisdictionsByState).map(
           ([state, stateJurisdictions], index) => (

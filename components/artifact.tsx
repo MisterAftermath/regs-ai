@@ -259,7 +259,7 @@ function PureArtifact({
       {artifact.isVisible && (
         <motion.div
           data-testid="artifact"
-          className="flex flex-row h-dvh w-dvw fixed top-0 left-0 z-50 bg-transparent"
+          className="flex flex-row h-dvh w-full fixed top-0 left-0 z-50 bg-transparent"
           initial={{ opacity: 1 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { delay: 0.4 } }}
@@ -373,7 +373,7 @@ function PureArtifact({
                     x: 0,
                     y: 0,
                     height: windowHeight,
-                    width: windowWidth ? windowWidth : 'calc(100dvw)',
+                    width: windowWidth || '100%',
                     borderRadius: 0,
                     transition: {
                       delay: 0,
@@ -390,7 +390,7 @@ function PureArtifact({
                     height: windowHeight,
                     width: windowWidth
                       ? windowWidth - 400
-                      : 'calc(100dvw-400px)',
+                      : 'calc(100% - 400px)',
                     borderRadius: 0,
                     transition: {
                       delay: 0,
