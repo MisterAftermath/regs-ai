@@ -56,10 +56,10 @@ export function ModelSelector({
         <Button
           data-testid="model-selector"
           variant="outline"
-          className="md:px-2 md:h-[34px]"
+          className="md:px-2 md:h-[34px] max-w-[150px] sm:max-w-none"
         >
-          {selectedChatModel?.name}
-          <ChevronDownIcon />
+          <span className="truncate">{selectedChatModel?.name}</span>
+          <ChevronDownIcon className="flex-shrink-0 ml-1" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
