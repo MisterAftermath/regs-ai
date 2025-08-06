@@ -62,11 +62,15 @@ export function JurisdictionSelector({
           variant="outline"
           className="md:px-2 md:h-[34px] max-w-[140px] sm:max-w-none"
         >
-          <GlobeIcon size={14} className="flex-shrink-0" />
+          <span className="flex-shrink-0">
+            <GlobeIcon size={14} />
+          </span>
           <span className="truncate">
             {selectedJurisdiction?.name || 'Select jurisdiction'}
           </span>
-          <ChevronDownIcon className="flex-shrink-0 ml-1" />
+          <span className="flex-shrink-0 ml-1">
+            <ChevronDownIcon />
+          </span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
