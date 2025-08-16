@@ -18,22 +18,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { PlusIcon, ChevronDownIcon } from '@/components/icons';
+import { PlusIcon } from '@/components/icons';
 import { AnnotationItem } from './annotation-item';
 import { AnnotationEditor } from './annotation-editor';
 import { useAnnotations } from '@/hooks/use-annotations';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Annotation } from '@/lib/db/schema';
 
-interface AnnotationsSectionProps {
-  onToggleCollapse?: () => void;
-  isCollapsed?: boolean;
-}
-
-export function AnnotationsSection({
-  onToggleCollapse,
-  isCollapsed = false,
-}: AnnotationsSectionProps = {}) {
+export function AnnotationsSection() {
   const {
     annotations,
     isLoading,
@@ -87,20 +79,7 @@ export function AnnotationsSection({
         <SidebarGroup className="h-full">
           <SidebarGroupLabel className="sticky top-0 bg-sidebar z-10">
             <div className="flex items-center justify-between w-full">
-              <div className="flex items-center gap-2">
-                {onToggleCollapse && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onToggleCollapse}
-                    className="h-6 w-6 p-0"
-                    title="Collapse annotations"
-                  >
-                    <ChevronDownIcon size={14} />
-                  </Button>
-                )}
-                <span>Annotations</span>
-              </div>
+              <span>Annotations</span>
               <Button
                 size="icon"
                 variant="ghost"
