@@ -87,13 +87,13 @@ export function JurisdictionSelector({
           variant="outline"
           className="md:px-2 md:h-[34px] max-w-[180px] sm:max-w-none"
         >
-          <span className="flex-shrink-0">
+          <span className="shrink-0">
             <GlobeIcon size={14} />
           </span>
           <span className="truncate">
             {selectedJurisdiction?.name || 'Select jurisdiction'}
           </span>
-          <span className="flex-shrink-0 ml-1">
+          <span className="shrink-0 ml-1">
             <ChevronDownIcon />
           </span>
         </Button>
@@ -173,7 +173,7 @@ export function JurisdictionSelector({
                       onValueChange(jurisdiction.id);
                       setOpen(false);
                     }}
-                    className="cursor-pointer rounded-sm px-2 py-2 my-0.5 hover:bg-accent/50 focus:bg-accent"
+                    className="cursor-pointer rounded-sm p-2 my-0.5 hover:bg-accent/50 focus:bg-accent"
                   >
                     <div className="flex items-center justify-between w-full">
                       <span
@@ -186,7 +186,9 @@ export function JurisdictionSelector({
                         {jurisdiction.name}
                       </span>
                       {jurisdiction.id === currentJurisdictionId && (
-                        <CheckCircleFillIcon className="h-4 w-4 text-primary" />
+                        <div className="size-4 text-primary">
+                          <CheckCircleFillIcon size={16} />
+                        </div>
                       )}
                     </div>
                   </DropdownMenuItem>
@@ -212,7 +214,7 @@ export function JurisdictionSelector({
                       onValueChange(jurisdiction.id);
                       setOpen(false);
                     }}
-                    className="cursor-pointer rounded-sm px-2 py-2 my-0.5 hover:bg-accent/50 focus:bg-accent"
+                    className="cursor-pointer rounded-sm p-2 my-0.5 hover:bg-accent/50 focus:bg-accent"
                   >
                     <div className="flex items-center justify-between w-full">
                       <span
@@ -225,7 +227,9 @@ export function JurisdictionSelector({
                         {jurisdiction.name}
                       </span>
                       {jurisdiction.id === currentJurisdictionId && (
-                        <CheckCircleFillIcon className="h-4 w-4 text-primary" />
+                        <div className="size-4 text-primary">
+                          <CheckCircleFillIcon size={16} />
+                        </div>
                       )}
                     </div>
                   </DropdownMenuItem>
