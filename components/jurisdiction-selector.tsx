@@ -145,8 +145,8 @@ export function JurisdictionSelector({
           {/* No results message */}
           {filteredJurisdictions.length === 0 && (
             <div className="p-8 text-center">
-              <div className="mb-2 text-muted-foreground">
-                <GlobeIcon size={32} className="mx-auto opacity-20" />
+              <div className="mb-2 text-muted-foreground flex justify-center opacity-20">
+                <GlobeIcon size={32} />
               </div>
               <p className="text-sm text-muted-foreground">
                 No jurisdictions found
