@@ -1,15 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 import { jurisdictions } from '@/lib/ai/jurisdictions';
 import { GlobeIcon, ChevronDownIcon, CheckCircleFillIcon } from './icons';
 import { cn } from '@/lib/utils';
@@ -26,6 +26,7 @@ export function JurisdictionSelector({
   className,
 }: JurisdictionSelectorProps) {
   const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Get default jurisdiction
   const defaultJurisdiction = jurisdictions.find((j) => j.isDefault);
@@ -36,21 +37,45 @@ export function JurisdictionSelector({
     (j) => j.id === currentJurisdictionId,
   );
 
-  // Group jurisdictions by state
-  const jurisdictionsByState = jurisdictions.reduce(
-    (acc, jurisdiction) => {
-      const state = jurisdiction.state || 'Other';
-      if (!acc[state]) {
-        acc[state] = [];
+  // Filter jurisdictions based on search query
+  const filteredJurisdictions = useMemo(() => {
+    if (!searchQuery.trim()) return jurisdictions;
+
+    const query = searchQuery.toLowerCase();
+    return jurisdictions.filter((j) => j.name.toLowerCase().includes(query));
+  }, [searchQuery]);
+
+  // Separate filtered jurisdictions into cities and counties
+  const { cities, counties } = useMemo(() => {
+    const cities: typeof jurisdictions = [];
+    const counties: typeof jurisdictions = [];
+
+    filteredJurisdictions.forEach((j) => {
+      if (j.name.includes('County')) {
+        counties.push(j);
+      } else {
+        cities.push(j);
       }
-      acc[state].push(jurisdiction);
-      return acc;
-    },
-    {} as Record<string, typeof jurisdictions>,
-  );
+    });
+
+    // Sort alphabetically
+    cities.sort((a, b) => a.name.localeCompare(b.name));
+    counties.sort((a, b) => a.name.localeCompare(b.name));
+
+    return { cities, counties };
+  }, [filteredJurisdictions]);
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu
+      open={open}
+      onOpenChange={(newOpen) => {
+        setOpen(newOpen);
+        // Reset search when closing
+        if (!newOpen) {
+          setSearchQuery('');
+        }
+      }}
+    >
       <DropdownMenuTrigger
         asChild
         className={cn(
@@ -60,7 +85,7 @@ export function JurisdictionSelector({
       >
         <Button
           variant="outline"
-          className="md:px-2 md:h-[34px] max-w-[140px] sm:max-w-none"
+          className="md:px-2 md:h-[34px] max-w-[180px] sm:max-w-none"
         >
           <span className="flex-shrink-0">
             <GlobeIcon size={14} />
@@ -75,39 +100,140 @@ export function JurisdictionSelector({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
-        className="min-w-[200px] max-w-[300px] sm:min-w-[240px]"
+        className="w-[320px] p-0"
+        onCloseAutoFocus={(e) => e.preventDefault()}
+        onInteractOutside={(e) => {
+          // Prevent closing when clicking outside if search has value
+          if (searchQuery.trim()) {
+            e.preventDefault();
+          }
+        }}
+        onPointerDownOutside={(e) => {
+          // Prevent closing when clicking outside if search has value
+          if (searchQuery.trim()) {
+            e.preventDefault();
+          }
+        }}
       >
-        {Object.entries(jurisdictionsByState).map(
-          ([state, stateJurisdictions], index) => (
-            <React.Fragment key={state}>
-              {index > 0 && <DropdownMenuSeparator />}
-              <DropdownMenuLabel className="text-xs text-muted-foreground">
-                {state}
-              </DropdownMenuLabel>
-              {stateJurisdictions.map((jurisdiction) => (
-                <DropdownMenuItem
-                  key={jurisdiction.id}
-                  onSelect={() => {
-                    setOpen(false);
-                    onValueChange(jurisdiction.id);
-                  }}
-                  data-active={jurisdiction.id === currentJurisdictionId}
-                  asChild
-                >
-                  <button
-                    type="button"
-                    className="gap-4 group/item flex flex-row justify-between items-center w-full"
+        {/* Search input */}
+        <div className="p-2 border-b">
+          <Input
+            placeholder="Search jurisdictions..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-8 w-full"
+            autoFocus
+            onKeyDown={(e) => {
+              // Prevent dropdown keyboard navigation while typing
+              e.stopPropagation();
+
+              // Allow Enter key to select first filtered result
+              if (e.key === 'Enter' && filteredJurisdictions.length > 0) {
+                e.preventDefault();
+                const firstResult = cities.length > 0 ? cities[0] : counties[0];
+                if (firstResult) {
+                  onValueChange(firstResult.id);
+                  setOpen(false);
+                }
+              }
+            }}
+          />
+        </div>
+
+        {/* Scrollable content area */}
+        <div className="max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent relative">
+          {/* No results message */}
+          {filteredJurisdictions.length === 0 && (
+            <div className="p-8 text-center">
+              <div className="mb-2 text-muted-foreground">
+                <GlobeIcon size={32} className="mx-auto opacity-20" />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                No jurisdictions found
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Try a different search term
+              </p>
+            </div>
+          )}
+
+          {/* Cities section */}
+          {cities.length > 0 && (
+            <>
+              <div className="sticky top-0 z-10 bg-background">
+                <DropdownMenuLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted/30 border-b">
+                  CITIES ({cities.length})
+                </DropdownMenuLabel>
+              </div>
+              <div className="px-1">
+                {cities.map((jurisdiction) => (
+                  <DropdownMenuItem
+                    key={jurisdiction.id}
+                    onSelect={() => {
+                      onValueChange(jurisdiction.id);
+                      setOpen(false);
+                    }}
+                    className="cursor-pointer rounded-sm px-2 py-2 my-0.5 hover:bg-accent/50 focus:bg-accent"
                   >
-                    <div className="text-sm">{jurisdiction.name}</div>
-                    <div className="text-foreground dark:text-foreground opacity-0 group-data-[active=true]/item:opacity-100">
-                      <CheckCircleFillIcon />
+                    <div className="flex items-center justify-between w-full">
+                      <span
+                        className={cn(
+                          'text-sm',
+                          jurisdiction.id === currentJurisdictionId &&
+                            'font-medium',
+                        )}
+                      >
+                        {jurisdiction.name}
+                      </span>
+                      {jurisdiction.id === currentJurisdictionId && (
+                        <CheckCircleFillIcon className="h-4 w-4 text-primary" />
+                      )}
                     </div>
-                  </button>
-                </DropdownMenuItem>
-              ))}
-            </React.Fragment>
-          ),
-        )}
+                  </DropdownMenuItem>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Counties section */}
+          {counties.length > 0 && (
+            <>
+              {cities.length > 0 && <div className="h-2" />}
+              <div className="sticky top-0 z-10 bg-background">
+                <DropdownMenuLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted/30 border-b">
+                  COUNTIES ({counties.length})
+                </DropdownMenuLabel>
+              </div>
+              <div className="px-1">
+                {counties.map((jurisdiction) => (
+                  <DropdownMenuItem
+                    key={jurisdiction.id}
+                    onSelect={() => {
+                      onValueChange(jurisdiction.id);
+                      setOpen(false);
+                    }}
+                    className="cursor-pointer rounded-sm px-2 py-2 my-0.5 hover:bg-accent/50 focus:bg-accent"
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span
+                        className={cn(
+                          'text-sm',
+                          jurisdiction.id === currentJurisdictionId &&
+                            'font-medium',
+                        )}
+                      >
+                        {jurisdiction.name}
+                      </span>
+                      {jurisdiction.id === currentJurisdictionId && (
+                        <CheckCircleFillIcon className="h-4 w-4 text-primary" />
+                      )}
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );

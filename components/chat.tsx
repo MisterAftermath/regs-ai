@@ -74,7 +74,7 @@ export function Chat({
       const requestBody = {
         id,
         message: body.messages.at(-1),
-        selectedChatModel: initialChatModel,
+        selectedChatModel: 'chat-model-building-code-chroma',
         selectedVisibilityType: visibilityType,
         jurisdictionId, // Add jurisdiction to request
       };
@@ -141,10 +141,8 @@ export function Chat({
       <div className="flex flex-col min-w-0 h-dvh bg-background overflow-x-hidden">
         <ChatHeader
           chatId={id}
-          selectedModelId={initialChatModel}
           selectedVisibilityType={initialVisibilityType}
           isReadonly={isReadonly}
-          session={session}
           selectedJurisdictionId={jurisdictionId}
           onJurisdictionChange={setJurisdictionId}
         />
